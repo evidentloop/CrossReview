@@ -3,9 +3,10 @@
 Prompt Lab runner — minimal script for testing CrossReview reviewer prompt.
 
 Usage:
-    python run.py cases/001-auth-refresh
+    python run.py cases/001-auth-refresh              # Call LLM directly
+    python run.py --render-only cases/001-auth-refresh # Render prompt to file for manual paste
 
-Reads pack.json + prompt-template.md → calls LLM → saves raw-output.md
+Reads pack.json + prompt-template.md → calls LLM (or renders prompt) → saves output
 """
 
 import json
@@ -27,13 +28,22 @@ def load_pack(case_dir: Path) -> dict:
     return json.loads(pack_path.read_text(encoding="utf-8"))
 
 
+def _normalize_list(val) -> list[str]:
+    """Normalize a list that may contain strings or dicts (e.g. FileMeta)."""
+    if not isinstance(val, list):
+        return []
+    return [item if isinstance(item, str) else str(item) for item in val]
+
+
 def build_prompt(template: str, pack: dict) -> str:
+    focus = _normalize_list(pack.get("focus", []))
+    changed_files = _normalize_list(pack.get("changed_files", []))
     return (
         template
         .replace("{intent}", pack.get("intent", "(no intent provided)"))
-        .replace("{focus}", ", ".join(pack.get("focus", [])) or "(no focus specified)")
+        .replace("{focus}", ", ".join(focus) or "(no focus specified)")
         .replace("{diff}", pack.get("diff", ""))
-        .replace("{changed_files}", ", ".join(pack.get("changed_files", [])))
+        .replace("{changed_files}", ", ".join(changed_files))
         .replace("{evidence}", json.dumps(pack.get("evidence", []), indent=2))
     )
 
@@ -84,12 +94,17 @@ def save_output(case_dir: Path, result: dict):
 
 
 def main():
-    if len(sys.argv) < 2:
-        print("Usage: python run.py <case_dir>")
+    render_only = "--render-only" in sys.argv
+    args = [a for a in sys.argv[1:] if a != "--render-only"]
+
+    if not args:
+        print("Usage: python run.py [--render-only] <case_dir>")
+        print("  --render-only  Render prompt to file, skip LLM call")
         print("Example: python run.py cases/001-auth-refresh")
+        print("Example: python run.py --render-only cases/001-auth-refresh")
         sys.exit(1)
 
-    case_dir = Path(sys.argv[1])
+    case_dir = Path(args[0])
     if not case_dir.is_dir():
         print(f"Error: {case_dir} is not a directory")
         sys.exit(1)
@@ -101,7 +116,15 @@ def main():
     print(f"Case: {case_dir.name}")
     print(f"Diff size: {len(pack.get('diff', ''))} chars")
     print(f"Intent: {pack.get('intent', '(none)')}")
-    print(f"Calling reviewer...")
+
+    if render_only:
+        rendered_path = case_dir / "rendered-prompt.md"
+        rendered_path.write_text(prompt, encoding="utf-8")
+        print(f"Rendered prompt saved: {rendered_path}")
+        print(f"Paste this into your LLM session, then save output to {case_dir / 'raw-output.md'}")
+        return
+
+    print("Calling reviewer...")
 
     result = call_reviewer(prompt)
     save_output(case_dir, result)

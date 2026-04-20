@@ -6,7 +6,7 @@
 
 ## 上游 Scope
 
-产品范围定义来自 [docs/v0-scope.md](../../docs/v0-scope.md)（canonical，Status: Confirmed）。
+产品范围定义来自 [docs/v0-scope.md](../../../docs/v0-scope.md)（canonical，Status: Confirmed）。
 
 ## 当前阶段
 

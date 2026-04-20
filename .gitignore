@@ -35,4 +35,5 @@ Thumbs.db
 .sopify-skills/plan/_registry.yaml
 
 # Prompt lab raw outputs (large, gitignore by default; commit selectively)
-prompt-lab/cases/*/raw-output-*.md
+prompt-lab/cases/*/raw-output.md
+prompt-lab/cases/*/rendered-prompt.md

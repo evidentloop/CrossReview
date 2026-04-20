@@ -2,7 +2,7 @@
 
 ## Source-of-Truth
 
-实现只认 [docs/v0-scope.md](../../docs/v0-scope.md)（Status: Confirmed）+ 本文件。
+实现只认 [docs/v0-scope.md](../../../docs/v0-scope.md)（Status: Confirmed）+ 本文件。
 
 ---
 

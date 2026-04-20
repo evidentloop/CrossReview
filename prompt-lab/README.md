@@ -15,10 +15,15 @@ mkdir cases/001-auth-refresh
 # 2. 准备 diff 和 pack
 #    - diff.patch: 真实 git diff
 #    - pack.json: 手工/半手写 ReviewPack（格式见下方）
-#    - expected.yaml: 手工 cross-review 发现的问题（gold baseline）
+#    - manual-findings.yaml: 手工 cross-review 发现的问题（gold baseline）
 
-# 3. 运行
+# 3a. 有 LLM client 实现时：直接运行
 python run.py cases/001-auth-refresh
+
+# 3b. 无 LLM client 时：渲染 prompt → 手动粘贴给模型
+python run.py --render-only cases/001-auth-refresh
+# → 生成 cases/001-auth-refresh/rendered-prompt.md
+# → 粘贴到 Claude/ChatGPT session，保存 output 到 raw-output.md
 
 # 4. 查看 raw output → cases/001-auth-refresh/raw-output.md
 

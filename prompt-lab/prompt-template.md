@@ -34,8 +34,9 @@ You are an independent code reviewer. You have NO access to the original develop
 
 ## Your Output
 
-Analyze the diff thoroughly, then report your findings. For each finding:
+Analyze the diff thoroughly, then report your findings. Number each finding sequentially as **f-001**, **f-002**, etc. For each finding:
 
+- **ID**: f-001, f-002, ... (sequential, stable — used in adjudication)
 - **Where**: File path and line number (if identifiable from the diff)
 - **What**: One-sentence summary of the issue
 - **Why**: Brief technical explanation

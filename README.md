@@ -50,7 +50,7 @@ crossreview verify  # pack + fresh review → structured findings + advisory ver
 
 ## Release Gate
 
-v0 发布需通过 [8 项 blocking release gates](docs/v0-scope.md#§12-success-criteria--release-gate)，包括：
+v0 发布需通过 [8 项 blocking release gates](docs/v0-scope.md)（见 §12），包括：
 
 - manual_recall ≥ 0.80
 - precision ≥ 0.70
