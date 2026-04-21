@@ -3,16 +3,25 @@ name = "crossreview"
 version = "0.0.1-alpha"
 description = "Context-isolated verification harness for AI-generated code"
 readme = "README.md"
-license = {text = "MIT"}
+license = "MIT"
 requires-python = ">=3.10"
-dependencies = []
+dependencies = [
+    "pyyaml>=6.0",
+]
 
 [project.optional-dependencies]
 dev = [
     "pytest",
     "ruff",
+    "pyyaml",
 ]
 
 [build-system]
-requires = ["setuptools>=68.0"]
+requires = ["setuptools>=77.0"]
 build-backend = "setuptools.build_meta"
+
+[project.scripts]
+crossreview = "crossreview.cli:_entry_point"
+
+[tool.setuptools.packages.find]
+include = ["crossreview*"]

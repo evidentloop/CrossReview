@@ -3,10 +3,9 @@
 Prompt Lab runner — minimal script for testing CrossReview reviewer prompt.
 
 Usage:
-    python run.py cases/001-auth-refresh              # Call LLM directly
     python run.py --render-only cases/001-auth-refresh # Render prompt to file for manual paste
 
-Reads pack.json + prompt-template.md → calls LLM (or renders prompt) → saves output
+Reads pack.json + prompt-template.md → renders prompt for manual paste → saves output
 """
 
 import json
@@ -14,10 +13,9 @@ import sys
 import time
 from pathlib import Path
 
-
-def load_prompt_template() -> str:
-    template_path = Path(__file__).parent / "prompt-template.md"
-    return template_path.read_text(encoding="utf-8")
+# Shared core — single renderer for Prompt Lab and crossreview verify
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from crossreview.core.prompt import load_reviewer_template, render_reviewer_prompt
 
 
 def load_pack(case_dir: Path) -> dict:
@@ -38,26 +36,6 @@ def load_pack(case_dir: Path) -> dict:
         sys.exit(1)
 
     return pack
-
-
-def _normalize_list(val) -> list[str]:
-    """Normalize a list that may contain strings or dicts (e.g. FileMeta)."""
-    if not isinstance(val, list):
-        return []
-    return [item if isinstance(item, str) else str(item) for item in val]
-
-
-def build_prompt(template: str, pack: dict) -> str:
-    focus = _normalize_list(pack.get("focus", []))
-    changed_files = _normalize_list(pack.get("changed_files", []))
-    return (
-        template
-        .replace("{intent}", pack.get("intent", "(no intent provided)"))
-        .replace("{focus}", ", ".join(focus) or "(no focus specified)")
-        .replace("{diff}", pack.get("diff", ""))
-        .replace("{changed_files}", ", ".join(changed_files))
-        .replace("{evidence}", json.dumps(pack.get("evidence", []), indent=2))
-    )
 
 
 def call_reviewer(prompt: str, model: str = None) -> dict:
@@ -109,10 +87,9 @@ def main():
     render_only = "--render-only" in sys.argv
     args = [a for a in sys.argv[1:] if a != "--render-only"]
 
-    if not args:
-        print("Usage: python run.py [--render-only] <case_dir>")
-        print("  --render-only  Render prompt to file, skip LLM call")
-        print("Example: python run.py cases/001-auth-refresh")
+    if not args or not render_only:
+        print("Usage: python run.py --render-only <case_dir>")
+        print("  --render-only  Render prompt to file for manual paste")
         print("Example: python run.py --render-only cases/001-auth-refresh")
         sys.exit(1)
 
@@ -121,9 +98,9 @@ def main():
         print(f"Error: {case_dir} is not a directory")
         sys.exit(1)
 
-    template = load_prompt_template()
+    template = load_reviewer_template()
     pack = load_pack(case_dir)
-    prompt = build_prompt(template, pack)
+    prompt = render_reviewer_prompt(template, pack)
 
     print(f"Case: {case_dir.name}")
     print(f"Diff size: {len(pack.get('diff', ''))} chars")
@@ -136,14 +113,9 @@ def main():
         print(f"Paste this into your LLM session, then save output to {case_dir / 'raw-output.md'}")
         return
 
-    print("Calling reviewer...")
-
-    result = call_reviewer(prompt)
-    save_output(case_dir, result)
-
-    print(f"Model: {result.get('model')}")
-    print(f"Latency: {result.get('latency_sec')}s")
-    print(f"Tokens: {result.get('input_tokens')} in / {result.get('output_tokens')} out")
+    print("Error: Prompt Lab currently supports render-only mode only.")
+    print(f"Paste the rendered prompt into your LLM session, then save output to {case_dir / 'raw-output.md'}")
+    sys.exit(1)
 
 
 if __name__ == "__main__":
