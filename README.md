@@ -71,29 +71,41 @@ crossreview verify --pack pack.json
 
 ## Architecture
 
-```mermaid
-flowchart LR
-    subgraph pack [Pack]
-        A[git diff] --> B[Pack CLI]
-    end
-    B --> C[ReviewPack JSON]
-
-    subgraph verify [Verify Pipeline]
-        D[Budget Gate] -->|trimmed diff| E[Reviewer]
-        D -.->|budget_status| H
-        E -->|raw_analysis| F[Normalizer]
-        F -->|Findings| G[Adjudicator]
-    end
-    C --> D
-    G --> H[ReviewResult JSON]
 ```
-
-| Component | Role |
-|-----------|------|
-| **Budget Gate** | Focus files first, diff order preserved, soft/hard char cap truncation |
-| **Reviewer** | Context-isolated LLM session, outputs free-form analysis (`raw_analysis`) |
-| **Normalizer** | Deterministic regex/heuristic, extracts structured `Finding` objects |
-| **Adjudicator** | Deterministic rule engine, produces advisory verdict |
++-------------------------+
+| crossreview pack        |  git diff + intent + focus + context
+| -> ReviewPack JSON      |
++-------------------------+
+             |
+             v
++-------------------------+
+| Budget Gate             |  focus-priority reorder, soft/hard truncation
+| -> budget_status        |  complete | truncated | rejected
++-------------------------+
+             |
+             v
++-------------------------+
+| Reviewer (LLM)          |  context-isolated fresh session
+| -> raw_analysis         |  free-form text, not schema-constrained
++-------------------------+
+             |
+             v
++-------------------------+
+| Normalizer              |  deterministic regex/heuristic
+| -> list[Finding]        |  structured findings: severity + category
++-------------------------+
+             |
+             v
++-------------------------+
+| Adjudicator             |  deterministic rule engine
+| -> advisory verdict     |  pass_candidate | has_findings | concerns
++-------------------------+
+             |
+             v
++-------------------------+
+| ReviewResult JSON       |  verdict + findings + quality_metrics
++-------------------------+
+```
 
 ## Installation
 

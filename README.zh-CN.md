@@ -71,29 +71,41 @@ crossreview verify --pack pack.json
 
 ## 架构
 
-```mermaid
-flowchart LR
-    subgraph pack [打包]
-        A[git diff] --> B[打包 CLI]
-    end
-    B --> C[ReviewPack JSON]
-
-    subgraph verify [验证流水线]
-        D[预算门控] -->|裁剪后 diff| E[审查器]
-        D -.->|预算状态| H
-        E -->|原始分析| F[归一化器]
-        F -->|结构化发现| G[裁定器]
-    end
-    C --> D
-    G --> H[ReviewResult JSON]
 ```
-
-| 组件 | 职责 |
-|------|------|
-| **预算门控** (Budget Gate) | focus 文件优先 + diff 原顺序，按 max_files / max_chars_total 截断 |
-| **审查器** (Reviewer) | 上下文隔离的 LLM session，输出自由分析文本（raw_analysis） |
-| **归一化器** (Normalizer) | 确定性 regex/heuristic，从 raw_analysis 提取结构化 Finding |
-| **裁定器** (Adjudicator) | 确定性规则引擎，产出 advisory verdict |
++-------------------------+
+| crossreview pack        |  git diff + intent + focus + context
+| -> ReviewPack JSON      |
++-------------------------+
+             |
+             v
++-------------------------+
+| Budget Gate             |  focus 优先排序，soft/hard 截断
+| -> budget_status        |  complete | truncated | rejected
++-------------------------+
+             |
+             v
++-------------------------+
+| Reviewer (LLM)          |  上下文隔离的全新 session
+| -> raw_analysis         |  自由文本分析，不约束 schema
++-------------------------+
+             |
+             v
++-------------------------+
+| Normalizer              |  确定性 regex/heuristic
+| -> list[Finding]        |  结构化发现：severity + category
++-------------------------+
+             |
+             v
++-------------------------+
+| Adjudicator             |  确定性规则引擎
+| -> advisory verdict     |  pass_candidate | has_findings | concerns
++-------------------------+
+             |
+             v
++-------------------------+
+| ReviewResult JSON       |  verdict + findings + quality_metrics
++-------------------------+
+```
 
 ## 安装
 
