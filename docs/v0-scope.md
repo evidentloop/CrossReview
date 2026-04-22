@@ -212,7 +212,7 @@ auto_adjudications:
 - `unclear_rate` = total_unclear_findings / total_auto_findings（均值口径）
 - `actionability` = actionability_judgment == actionable 的 valid findings / 总 valid findings（基于人工 adjudication，不用 runtime Finding.actionable）
 - `failure_rate` = failed_eval_runs / total_eval_runs；failure 定义 = review_status ∈ {rejected, failed} 或 output malformed 或 model error/timeout（truncated 不算 failure，truncated 有自己的 verdict cap）
-- `context_fidelity` = manual_findings.context_items 中 required == true 且 covered_by_pack == true 的 / 总 required context_items
+- `context_fidelity` = manual_findings.context_items 中 required == true 且 covered_by_pack == true 的 / required 且 covered_by_pack is not null 的 context_items（covered_by_pack == null 视为未评估，不计入分子也不计入分母）
 - `context_fidelity` v0 匹配规则：**人工标记 covered_by_pack: true/false**，不做自动匹配
 
 > **设计理由**：如果 baseline 不落盘，manual_recall ≥ 0.80 和 precision ≥ 0.70 会变成主观感觉。
@@ -390,6 +390,22 @@ Fingerprint: diff:a3f2b1c | pack:e7d4a2f | reviewer:fresh_llm_v0
   "pack_fingerprint": "e7d4a2f",
   "review_status": "complete",
   "intent_coverage": "covered",
+  "raw_findings": [
+    {
+      "id": "f-001",
+      "severity": "high",
+      "file": "src/auth/refresh.ts",
+      "line": 42,
+      "diff_hunk": "@@ -40,3 +40,3 @@",
+      "summary": "Token expiry comparison uses `<` instead of `<=`",
+      "detail": "Off-by-one causes premature refresh failure",
+      "category": "logic_error",
+      "locatability": "exact",
+      "confidence": "plausible",
+      "evidence_related_file": true,
+      "actionable": true
+    }
+  ],
   "findings": [
     {
       "id": "f-001",
@@ -416,13 +432,13 @@ Fingerprint: diff:a3f2b1c | pack:e7d4a2f | reviewer:fresh_llm_v0
   "quality_metrics": {
     "pack_completeness": 0.85,
     "noise_count": 0,
-    "raw_findings_count": 3,
-    "emitted_findings_count": 3,
+    "raw_findings_count": 1,
+    "emitted_findings_count": 1,
     "speculative_ratio": 0.00,
     "locatability_distribution": {
-      "exact": 0.67,
-      "file_only": 0.33,
-      "none": 0.00
+      "exact_pct": 1.00,
+      "file_only_pct": 0.00,
+      "none_pct": 0.00
     }
   },
   "advisory_verdict": {
@@ -456,7 +472,7 @@ Fingerprint: diff:a3f2b1c | pack:e7d4a2f | reviewer:fresh_llm_v0
 >
 > *ReviewResult 侧*（eval 从运行产出读取）：
 > `Finding.locatability`, `Finding.confidence`, `Finding.evidence_related_file`,
-> `ReviewResult.review_status`, `ReviewResult.advisory_verdict.verdict`,
+> `ReviewResult.review_status`, `ReviewResult.advisory_verdict.verdict`, `ReviewResult.raw_findings`,
 > `quality_metrics.raw_findings_count`, `quality_metrics.emitted_findings_count`,
 > `quality_metrics.noise_count`, `quality_metrics.speculative_ratio`。
 >
@@ -509,8 +525,11 @@ ReviewResult:
   review_status: "complete" | "truncated" | "rejected" | "failed"
   intent_coverage: "covered" | "partial" | "unknown"  # unknown = 无 intent 输入
   
+  # 原始 finding（noise_cap 截断前，eval 使用这一层）
+  raw_findings: list[Finding]
+
   # 发现
-  findings: list[Finding]
+  findings: list[Finding]          # emitted findings（noise_cap 截断后，产品输出使用）
   
   # 证据（透传 + reviewer 可补充）
   evidence: list[Evidence]
@@ -662,7 +681,7 @@ constraints:
   - rule: "noise_cap"
     default_max_findings: 7
     description: "CLI 输出截断；超出的按 severity 排序截断（同 severity 时 evidence_related_file=true 优先）"
-    eval_note: "eval 必须使用 raw_findings（截断前），不受 noise_cap 影响；ReviewResult 记录 raw_findings_count 和 emitted_findings_count"
+    eval_note: "eval 必须使用顶层 raw_findings（截断前），不受 noise_cap 影响；ReviewResult 同时记录 raw_findings_count 和 emitted_findings_count"
 ```
 
 ### ReviewerFailureReason
@@ -892,8 +911,8 @@ pack_completeness 计算:
 
 ```yaml
 noise_count = 被 noise_cap 截断的 finding 数
-            + severity == "note" 且 actionable == false 的 finding 数
-            + speculative 且 locatability == none 的 finding 数
+            + emitted findings 中 severity == "note" 且 actionable == false 的 finding 数
+            + emitted findings 中 speculative 且 locatability == none 的 finding 数
 
 用途:
   - noise_count > 2 → 在输出中标记

@@ -254,6 +254,7 @@ class ReviewResult:
     review_status: ReviewStatus = ReviewStatus.COMPLETE
     intent_coverage: IntentCoverage = IntentCoverage.UNKNOWN
 
+    raw_findings: list[Finding] = field(default_factory=list)
     findings: list[Finding] = field(default_factory=list)
     evidence: list[Evidence] = field(default_factory=list)
 
@@ -419,6 +420,108 @@ def validate_review_result(result: ReviewResult) -> list[str]:
     return violations
 
 
+def validate_eval_review_result_contract(data: dict[str, Any]) -> list[str]:
+    """Check the eval-facing ReviewResult JSON contract.
+
+    This is intentionally stricter than validate_review_result():
+    - It validates the JSON shape expected by the offline eval harness.
+    - It requires explicit runtime fields instead of allowing schema defaults.
+    - It enforces raw/emitted finding count consistency for noise-cap analysis.
+    """
+    violations: list[str] = []
+
+    review_status = data.get("review_status")
+    if not isinstance(review_status, str) or not review_status:
+        violations.append("review_status_required")
+
+    advisory_verdict_data = data.get("advisory_verdict")
+    if not isinstance(advisory_verdict_data, dict):
+        violations.append("advisory_verdict_required")
+    else:
+        advisory_verdict = advisory_verdict_data.get("verdict")
+        if not isinstance(advisory_verdict, str) or not advisory_verdict:
+            violations.append("advisory_verdict_verdict_required")
+
+    reviewer_data = data.get("reviewer")
+    if not isinstance(reviewer_data, dict):
+        violations.append("reviewer_required")
+    else:
+        reviewer_model = reviewer_data.get("model")
+        if not isinstance(reviewer_model, str) or not reviewer_model:
+            violations.append("reviewer_model_required")
+
+    findings_data = data.get("findings")
+    if not isinstance(findings_data, list):
+        violations.append("findings_required")
+        findings_data = None
+
+    raw_findings_data = data.get("raw_findings")
+    if not isinstance(raw_findings_data, list):
+        violations.append("raw_findings_required")
+        raw_findings_data = None
+
+    quality_data = data.get("quality_metrics")
+    if not isinstance(quality_data, dict):
+        violations.append("quality_metrics_required")
+        quality_data = None
+
+    raw_count: int | None = None
+    emitted_count: int | None = None
+    if quality_data is not None:
+        raw_count = quality_data.get("raw_findings_count")
+        if not isinstance(raw_count, int) or raw_count < 0:
+            violations.append("quality_metrics_raw_findings_count_required")
+            raw_count = None
+
+        emitted_count = quality_data.get("emitted_findings_count")
+        if not isinstance(emitted_count, int) or emitted_count < 0:
+            violations.append("quality_metrics_emitted_findings_count_required")
+            emitted_count = None
+
+        noise_count = quality_data.get("noise_count")
+        if not isinstance(noise_count, int) or noise_count < 0:
+            violations.append("quality_metrics_noise_count_required")
+
+        speculative_ratio = quality_data.get("speculative_ratio")
+        if (
+            not isinstance(speculative_ratio, (int, float))
+            or speculative_ratio < 0
+            or speculative_ratio > 1
+        ):
+            violations.append("quality_metrics_speculative_ratio_required")
+
+    if raw_findings_data is not None and raw_count is not None:
+        if len(raw_findings_data) != raw_count:
+            violations.append("raw_findings_count_mismatch")
+
+    if findings_data is not None and emitted_count is not None:
+        if len(findings_data) != emitted_count:
+            violations.append("emitted_findings_count_mismatch")
+
+    if raw_count is not None and emitted_count is not None and raw_count < emitted_count:
+        violations.append("raw_findings_count_lt_emitted_findings_count")
+
+    if raw_findings_data is not None and findings_data is not None:
+        raw_ids = {
+            item.get("id")
+            for item in raw_findings_data
+            if isinstance(item, dict) and isinstance(item.get("id"), str)
+        }
+        emitted_ids = {
+            item.get("id")
+            for item in findings_data
+            if isinstance(item, dict) and isinstance(item.get("id"), str)
+        }
+        if len(emitted_ids) != len(findings_data):
+            violations.append("emitted_finding_ids_required")
+        if len(raw_ids) != len(raw_findings_data):
+            violations.append("raw_finding_ids_required")
+        if not emitted_ids.issubset(raw_ids):
+            violations.append("emitted_findings_not_subset_of_raw_findings")
+
+    return violations
+
+
 # ---------------------------------------------------------------------------
 # Fingerprint helpers
 # ---------------------------------------------------------------------------
@@ -437,6 +540,11 @@ def to_serializable(obj: Any) -> Any:
             f.name: to_serializable(getattr(obj, f.name))
             for f in dc_fields(obj)
         }
+    if isinstance(obj, dict):
+        return {
+            key: to_serializable(value)
+            for key, value in obj.items()
+        }
     if isinstance(obj, list):
         return [to_serializable(item) for item in obj]
     return obj
@@ -445,6 +553,33 @@ def to_serializable(obj: Any) -> Any:
 def review_result_to_json(result: ReviewResult, *, indent: int = 2) -> str:
     """Serialize a ReviewResult to JSON."""
     return json.dumps(to_serializable(result), indent=indent, ensure_ascii=False)
+
+
+def _findings_from_data(items: list[dict[str, Any]]) -> list[Finding]:
+    REQUIRED_KEYS = ("id", "severity", "summary", "detail", "category", "locatability", "confidence")
+    results: list[Finding] = []
+    for idx, item in enumerate(items):
+        missing = [k for k in REQUIRED_KEYS if k not in item]
+        if missing:
+            raise ValueError(f"finding[{idx}] missing required keys: {', '.join(missing)}")
+        results.append(
+            Finding(
+                id=item["id"],
+                severity=Severity(item["severity"]),
+                summary=item["summary"],
+                detail=item["detail"],
+                category=item["category"],
+                locatability=Locatability(item["locatability"]),
+                confidence=Confidence(item["confidence"]),
+                evidence_related_file=item.get("evidence_related_file", False),
+                actionable=item.get("actionable", True),
+                file=item.get("file"),
+                line=item.get("line"),
+                diff_hunk=item.get("diff_hunk"),
+                requirement_ref=item.get("requirement_ref"),
+            )
+        )
+    return results
 
 
 def review_pack_from_dict(data: dict[str, Any]) -> ReviewPack:
@@ -504,5 +639,90 @@ def review_pack_from_dict(data: dict[str, Any]) -> ReviewPack:
         focus=data.get("focus"),
         context_files=context_files,
         evidence=evidence,
+        budget=budget,
+    )
+
+
+def review_result_from_dict(data: dict[str, Any]) -> ReviewResult:
+    """Construct a ReviewResult from parsed JSON data.
+
+    Eval harness consumes saved runtime outputs through the same schema layer as
+    the product pipeline. This keeps the aggregation logic from re-implementing
+    runtime field semantics ad hoc.
+    """
+    findings = _findings_from_data(data.get("findings", []))
+    raw_findings = _findings_from_data(data.get("raw_findings", []))
+
+    evidence = [
+        Evidence(
+            source=item["source"],
+            status=EvidenceStatus(item["status"]),
+            summary=item["summary"],
+            command=item.get("command"),
+            detail=item.get("detail"),
+        )
+        for item in data.get("evidence", [])
+    ]
+
+    verdict_data = data.get("advisory_verdict") or {}
+    advisory_verdict = AdvisoryVerdict(
+        verdict=Verdict(verdict_data.get("verdict", Verdict.INCONCLUSIVE.value)),
+        rationale=verdict_data.get("rationale", ""),
+    )
+
+    loc_data = (data.get("quality_metrics") or {}).get("locatability_distribution") or {}
+    quality_data = data.get("quality_metrics") or {}
+    quality_metrics = QualityMetrics(
+        pack_completeness=quality_data.get("pack_completeness", 0.0),
+        noise_count=quality_data.get("noise_count", 0),
+        raw_findings_count=quality_data.get("raw_findings_count", 0),
+        emitted_findings_count=quality_data.get("emitted_findings_count", 0),
+        locatability_distribution=LocalizabilityDistribution(
+            exact_pct=loc_data.get("exact_pct", 0.0),
+            file_only_pct=loc_data.get("file_only_pct", 0.0),
+            none_pct=loc_data.get("none_pct", 0.0),
+        ),
+        speculative_ratio=quality_data.get("speculative_ratio", 0.0),
+    )
+
+    reviewer_data = data.get("reviewer") or {}
+    reviewer = ReviewerMeta(
+        type=reviewer_data.get("type", "fresh_llm"),
+        model=reviewer_data.get("model", ""),
+        session_isolated=reviewer_data.get("session_isolated", True),
+        failure_reason=(
+            ReviewerFailureReason(reviewer_data["failure_reason"])
+            if reviewer_data.get("failure_reason")
+            else None
+        ),
+        raw_analysis=reviewer_data.get("raw_analysis"),
+        latency_sec=reviewer_data.get("latency_sec"),
+        input_tokens=reviewer_data.get("input_tokens"),
+        output_tokens=reviewer_data.get("output_tokens"),
+    )
+
+    budget_data = data.get("budget") or {}
+    budget = ResultBudget(
+        status=BudgetStatus(budget_data.get("status", BudgetStatus.COMPLETE.value)),
+        files_reviewed=budget_data.get("files_reviewed", 0),
+        files_total=budget_data.get("files_total", 0),
+        chars_consumed=budget_data.get("chars_consumed", 0),
+        chars_limit=budget_data.get("chars_limit"),
+    )
+
+    return ReviewResult(
+        schema_version=data.get("schema_version", SCHEMA_VERSION),
+        artifact_fingerprint=data.get("artifact_fingerprint", ""),
+        pack_fingerprint=data.get("pack_fingerprint", ""),
+        review_status=ReviewStatus(data.get("review_status", ReviewStatus.COMPLETE.value)),
+        intent_coverage=IntentCoverage(
+            data.get("intent_coverage", IntentCoverage.UNKNOWN.value)
+        ),
+        raw_findings=raw_findings,
+        findings=findings,
+        evidence=evidence,
+        advisory_verdict=advisory_verdict,
+        quality_metrics=quality_metrics,
+        reviewer=reviewer,
         budget=budget,
     )

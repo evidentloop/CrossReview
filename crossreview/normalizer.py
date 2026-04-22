@@ -27,12 +27,19 @@ _HEDGE_RE = re.compile(
     re.IGNORECASE,
 )
 _NON_WORD_RE = re.compile(r"[^a-z0-9]+")
+_SEVERITY_PRIORITY = {
+    Severity.HIGH: 3,
+    Severity.MEDIUM: 2,
+    Severity.LOW: 1,
+    Severity.NOTE: 0,
+}
 
 
 @dataclass
 class NormalizationResult:
     """Structured findings plus runtime diagnostic metrics."""
 
+    raw_findings: list[Finding]
     findings: list[Finding]
     quality_metrics: QualityMetrics
     raw_findings_count: int
@@ -179,6 +186,21 @@ def _enforce_constraints(finding: Finding) -> Finding:
     return finding
 
 
+def _sort_emitted_findings(findings: list[Finding]) -> list[Finding]:
+    """Order emitted findings by severity, then evidence tie-breaker.
+
+    raw_findings preserve reviewer order for eval/audit purposes. Only the
+    emitted subset is reordered before noise-cap truncation.
+    """
+    return sorted(
+        findings,
+        key=lambda finding: (
+            -_SEVERITY_PRIORITY[finding.severity],
+            not finding.evidence_related_file,
+        ),
+    )
+
+
 def normalize_review_output(
     raw_analysis: str,
     pack: ReviewPack,
@@ -218,7 +240,8 @@ def normalize_review_output(
         parsed_findings.append(_enforce_constraints(finding))
 
     raw_findings_count = len(parsed_findings)
-    emitted_findings = parsed_findings[:max_findings]
+    emitted_candidates = _sort_emitted_findings(list(parsed_findings))
+    emitted_findings = emitted_candidates[:max_findings]
     truncated_count = max(raw_findings_count - len(emitted_findings), 0)
 
     exact = sum(1 for finding in emitted_findings if finding.locatability == Locatability.EXACT)
@@ -242,6 +265,8 @@ def normalize_review_output(
     }
     noise_count = truncated_count + len(noisy_ids)
 
+    # These runtime diagnostics intentionally describe the findings that the
+    # product actually emits after noise-cap truncation, not the full raw set.
     quality_metrics = QualityMetrics(
         pack_completeness=pack_completeness,
         noise_count=noise_count,
@@ -256,6 +281,7 @@ def normalize_review_output(
     )
 
     return NormalizationResult(
+        raw_findings=parsed_findings,
         findings=emitted_findings,
         quality_metrics=quality_metrics,
         raw_findings_count=raw_findings_count,

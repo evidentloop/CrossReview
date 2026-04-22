@@ -10,8 +10,14 @@ from crossreview.cli import main
 from crossreview.pack import assemble_pack, pack_to_json
 from crossreview.schema import (
     BudgetStatus,
+    Confidence,
     FileMeta,
+    Finding,
+    LocalizabilityDistribution,
+    Locatability,
+    QualityMetrics,
     ReviewerFailureReason,
+    Severity,
 )
 
 
@@ -192,8 +198,107 @@ class TestVerifyCLI:
         parsed = json.loads(out.out)
         assert parsed["review_status"] == "complete"
         assert parsed["reviewer"]["model"] == "claude-sonnet-4-20250514"
+        assert len(parsed["raw_findings"]) == 1
         assert parsed["findings"][0]["id"] == "f-001"
         assert "crossreview verify: review_status=complete" in out.err
+
+    def test_verify_preserves_raw_findings_before_noise_cap(self, capsys, tmp_path):
+        pack_path = self._write_pack(tmp_path, intent="fix greeting")
+        with (
+            patch("crossreview.cli.resolve_reviewer_config") as resolve_cfg,
+            patch("crossreview.cli.resolve_reviewer_backend") as resolve_backend,
+            patch("crossreview.cli.normalize_review_output") as normalize_output,
+        ):
+            resolve_cfg.return_value = type(
+                "Cfg",
+                (),
+                {
+                    "provider": "anthropic",
+                    "model": "claude-sonnet-4-20250514",
+                    "api_key_env": "ANTHROPIC_API_KEY",
+                },
+            )()
+            backend = resolve_backend.return_value
+            backend.review.return_value = type(
+                "Resp",
+                (),
+                {
+                    "raw_analysis": "raw",
+                    "model": "claude-sonnet-4-20250514",
+                    "latency_sec": 1.2,
+                    "input_tokens": 100,
+                    "output_tokens": 80,
+                },
+            )()
+            normalize_output.return_value = type(
+                "Norm",
+                (),
+                {
+                    "raw_findings": [
+                        Finding(
+                            id="f-001",
+                            severity=Severity.MEDIUM,
+                            summary="s1",
+                            detail="d1",
+                            category="logic_error",
+                            locatability=Locatability.EXACT,
+                            confidence=Confidence.PLAUSIBLE,
+                            evidence_related_file=False,
+                            actionable=True,
+                            file="hello.py",
+                            line=2,
+                        ),
+                        Finding(
+                            id="f-002",
+                            severity=Severity.LOW,
+                            summary="s2",
+                            detail="d2",
+                            category="style",
+                            locatability=Locatability.FILE_ONLY,
+                            confidence=Confidence.SPECULATIVE,
+                            evidence_related_file=False,
+                            actionable=False,
+                            file="hello.py",
+                        ),
+                    ],
+                    "findings": [
+                        Finding(
+                            id="f-001",
+                            severity=Severity.MEDIUM,
+                            summary="s1",
+                            detail="d1",
+                            category="logic_error",
+                            locatability=Locatability.EXACT,
+                            confidence=Confidence.PLAUSIBLE,
+                            evidence_related_file=False,
+                            actionable=True,
+                            file="hello.py",
+                            line=2,
+                        )
+                    ],
+                    "quality_metrics": QualityMetrics(
+                        pack_completeness=0.8,
+                        noise_count=1,
+                        raw_findings_count=2,
+                        emitted_findings_count=1,
+                        locatability_distribution=LocalizabilityDistribution(
+                            exact_pct=1.0,
+                            file_only_pct=0.0,
+                            none_pct=0.0,
+                        ),
+                        speculative_ratio=0.0,
+                    ),
+                },
+            )()
+
+            rc = main(["verify", "--pack", str(pack_path)])
+
+        assert rc == 0
+        parsed = json.loads(capsys.readouterr().out)
+        assert parsed["quality_metrics"]["raw_findings_count"] == 2
+        assert parsed["quality_metrics"]["emitted_findings_count"] == 1
+        assert len(parsed["raw_findings"]) == 2
+        assert len(parsed["findings"]) == 1
 
     def test_verify_invalid_json(self, capsys, tmp_path):
         pack_path = tmp_path / "pack.json"

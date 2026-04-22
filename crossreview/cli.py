@@ -222,6 +222,7 @@ def _build_result(
     chars_consumed: int,
     chars_limit: int | None,
     review_status: ReviewStatus,
+    raw_findings: list | None = None,
     findings=None,
     raw_analysis: str | None = None,
     latency_sec: float | None = None,
@@ -238,6 +239,7 @@ def _build_result(
         pack_fingerprint=pack.pack_fingerprint,
         review_status=review_status,
         intent_coverage=intent_coverage or determine_intent_coverage(pack, findings or []),
+        raw_findings=raw_findings or [],
         findings=findings or [],
         evidence=list(pack.evidence or []),
         advisory_verdict=advisory_verdict or AdvisoryVerdict(
@@ -369,6 +371,7 @@ def _cmd_verify(args: argparse.Namespace) -> int:
         chars_limit=budget_result.chars_limit,
         review_status=review_status,
         findings=normalization.findings,
+        raw_findings=normalization.raw_findings,
         raw_analysis=review.raw_analysis,
         latency_sec=review.latency_sec,
         input_tokens=review.input_tokens,

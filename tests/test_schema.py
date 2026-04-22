@@ -35,6 +35,7 @@ from crossreview.schema import (
     Severity,
     Verdict,
     compute_fingerprint,
+    validate_eval_review_result_contract,
     validate_category,
     validate_finding_constraints,
     validate_finding_id,
@@ -365,6 +366,7 @@ class TestReviewResult:
         assert result.schema_version == SCHEMA_VERSION
         assert result.review_status == ReviewStatus.COMPLETE
         assert result.intent_coverage == IntentCoverage.UNKNOWN
+        assert result.raw_findings == []
         assert result.findings == []
         assert result.evidence == []
         assert result.advisory_verdict.verdict == Verdict.INCONCLUSIVE
@@ -472,6 +474,105 @@ class TestReviewResultValidation:
         )
         violations = validate_review_result(result)
         assert violations == ["reviewer_model_required"]
+
+    def test_eval_contract_requires_explicit_runtime_fields(self):
+        payload = {
+            "schema_version": SCHEMA_VERSION,
+            "artifact_fingerprint": "abc123",
+            "pack_fingerprint": "def456",
+            "review_status": "complete",
+            "advisory_verdict": {
+                "verdict": "concerns",
+                "rationale": "found issue",
+            },
+            "raw_findings": [],
+            "findings": [],
+            "quality_metrics": {
+                "pack_completeness": 0.8,
+                "noise_count": 0,
+                "raw_findings_count": 0,
+                "emitted_findings_count": 0,
+                "locatability_distribution": {
+                    "exact_pct": 0.0,
+                    "file_only_pct": 0.0,
+                    "none_pct": 0.0,
+                },
+                "speculative_ratio": 0.0,
+            },
+            "reviewer": {
+                "type": "fresh_llm",
+                "model": "claude-sonnet-4-20250514",
+                "session_isolated": True,
+            },
+            "budget": {
+                "status": "complete",
+                "files_reviewed": 0,
+                "files_total": 0,
+                "chars_consumed": 0,
+                "chars_limit": None,
+            },
+        }
+        assert validate_eval_review_result_contract(payload) == []
+
+    def test_eval_contract_rejects_raw_findings_count_mismatch(self):
+        payload = {
+            "review_status": "complete",
+            "advisory_verdict": {"verdict": "concerns"},
+            "raw_findings": [{"id": "f-001"}],
+            "findings": [],
+            "quality_metrics": {
+                "raw_findings_count": 0,
+                "emitted_findings_count": 0,
+                "noise_count": 0,
+                "speculative_ratio": 0.0,
+            },
+            "reviewer": {"model": "claude-sonnet-4-20250514"},
+        }
+        violations = validate_eval_review_result_contract(payload)
+        assert "raw_findings_count_mismatch" in violations
+
+    def test_eval_contract_requires_advisory_verdict_verdict(self):
+        payload = {
+            "review_status": "complete",
+            "advisory_verdict": {},
+            "raw_findings": [],
+            "findings": [],
+            "quality_metrics": {
+                "raw_findings_count": 0,
+                "emitted_findings_count": 0,
+                "noise_count": 0,
+                "speculative_ratio": 0.0,
+            },
+            "reviewer": {"model": "claude-sonnet-4-20250514"},
+        }
+        violations = validate_eval_review_result_contract(payload)
+        assert "advisory_verdict_verdict_required" in violations
+
+    def test_findings_from_data_rejects_missing_required_keys(self):
+        """Parser-level guard: a finding missing required keys (e.g. severity)
+        raises ValueError, which load_fixture() wraps into EvalContractError."""
+        from crossreview.schema import review_result_from_dict
+
+        base = {
+            "review_status": "complete",
+            "advisory_verdict": {"verdict": "pass_candidate", "rationale": "ok"},
+            "reviewer": {"model": "test"},
+            "quality_metrics": {
+                "raw_findings_count": 1,
+                "emitted_findings_count": 1,
+                "noise_count": 0,
+                "speculative_ratio": 0.0,
+            },
+            "raw_findings": [{"id": "f-001"}],
+            "findings": [{"id": "f-001"}],
+        }
+        try:
+            review_result_from_dict(base)
+        except ValueError as exc:
+            assert "missing required keys" in str(exc)
+            assert "severity" in str(exc)
+        else:
+            raise AssertionError("expected ValueError for finding missing required keys")
 
 
 # ===== Enum Coverage =====

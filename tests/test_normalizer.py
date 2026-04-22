@@ -62,6 +62,7 @@ class TestNormalizer:
     def test_parses_findings_and_ignores_observations(self):
         result = normalize_review_output(RAW_OUTPUT, PACK)
         assert result.raw_findings_count == 2
+        assert len(result.raw_findings) == 2
         assert len(result.findings) == 2
         assert result.findings[0].id == "f-001"
         assert result.findings[0].locatability == Locatability.EXACT
@@ -79,8 +80,72 @@ class TestNormalizer:
     def test_noise_cap_truncates(self):
         result = normalize_review_output(RAW_OUTPUT, PACK, max_findings=1)
         assert result.raw_findings_count == 2
+        assert len(result.raw_findings) == 2
         assert result.emitted_findings_count == 1
+        assert len(result.findings) == 1
+        assert result.findings[0].id == "f-001"
         assert result.noise_count >= 1
+
+    def test_noise_cap_sorts_by_constrained_severity_before_truncation(self):
+        raw = """\
+## Section 1: Findings
+
+**f-001**
+- **Where**: `src/auth.py`
+- **What**: Minor style issue in the new code path.
+- **Why**: Style only.
+- **Severity estimate**: LOW
+- **Category**: style
+
+**f-002**
+- **Where**: `src/auth.py`, line 8
+- **What**: Missing authorization check allows unintended access.
+- **Why**: The new branch returns before the auth guard runs.
+- **Severity estimate**: HIGH
+- **Category**: logic_error
+"""
+        result = normalize_review_output(raw, PACK, max_findings=1)
+        assert [finding.id for finding in result.raw_findings] == ["f-001", "f-002"]
+        assert [finding.id for finding in result.findings] == ["f-002"]
+
+    def test_noise_cap_prefers_evidence_related_file_on_severity_tie(self):
+        raw = """\
+## Section 1: Findings
+
+**f-001**
+- **Where**: `src/other.py`, line 5
+- **What**: Missing validation in the new branch causes a crash.
+- **Why**: The diff removed the guard before dereferencing the value.
+- **Severity estimate**: MEDIUM
+- **Category**: logic_error
+
+**f-002**
+- **Where**: `src/auth.py`, line 7
+- **What**: Missing validation in the auth branch causes a crash.
+- **Why**: The diff removed the guard before dereferencing the value.
+- **Severity estimate**: MEDIUM
+- **Category**: logic_error
+"""
+        pack = ReviewPack(
+            diff=PACK.diff,
+            changed_files=[
+                FileMeta(path="src/auth.py", language="python"),
+                FileMeta(path="src/other.py", language="python"),
+            ],
+            artifact_fingerprint="artifact",
+            pack_fingerprint="pack",
+            evidence=[
+                Evidence(
+                    source="pytest",
+                    status=EvidenceStatus.FAIL,
+                    summary="src/auth.py failed",
+                    detail="src/auth.py::test_auth failed",
+                )
+            ],
+        )
+        result = normalize_review_output(raw, pack, max_findings=1)
+        assert [finding.id for finding in result.raw_findings] == ["f-001", "f-002"]
+        assert [finding.id for finding in result.findings] == ["f-002"]
 
     def test_supports_heading_style_ids(self):
         raw = """\
