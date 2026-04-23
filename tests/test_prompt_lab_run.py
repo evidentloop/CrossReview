@@ -48,6 +48,13 @@ def _write_case(tmp_path: Path) -> Path:
     return case_dir
 
 
+def _write_case_with_pack(tmp_path: Path, pack: dict) -> Path:
+    case_dir = tmp_path / "case"
+    case_dir.mkdir()
+    (case_dir / "pack.json").write_text(json.dumps(pack), encoding="utf-8")
+    return case_dir
+
+
 class TestPromptLabRun:
     def test_load_review_pack_reassembles_legacy_pack_with_fingerprints(self, tmp_path):
         runner = _load_prompt_lab_run()
@@ -56,6 +63,25 @@ class TestPromptLabRun:
         assert pack.artifact_fingerprint
         assert pack.pack_fingerprint
         assert pack.changed_files[0].path == "hello.py"
+
+    def test_load_review_pack_preserves_legacy_changed_files_order(self, tmp_path):
+        runner = _load_prompt_lab_run()
+        case_dir = _write_case_with_pack(
+            tmp_path,
+            {
+                "artifact_type": "code_diff",
+                "diff": SAMPLE_DIFF,
+                "changed_files": [
+                    {"path": "z_first.py", "language": "python"},
+                    "a_second.py",
+                ],
+            },
+        )
+
+        pack = runner.load_review_pack(case_dir)
+
+        assert [item.path for item in pack.changed_files] == ["z_first.py", "a_second.py"]
+        assert pack.changed_files[0].language == "python"
 
     def test_render_only_keeps_prompt_lab_template_seam(self):
         runner = _load_prompt_lab_run()
@@ -168,7 +194,20 @@ class TestPromptLabRun:
 
         assert "unrecognized arguments: --modle" in capsys.readouterr().err
 
-    def test_api_only_returns_error_for_invalid_legacy_pack(self, capsys, tmp_path):
+    def test_render_only_reports_missing_pack_without_traceback(self, capsys, tmp_path):
+        runner = _load_prompt_lab_run()
+        case_dir = tmp_path / "case"
+        case_dir.mkdir()
+
+        with patch.object(runner.sys, "argv", ["run.py", "--render-only", str(case_dir)]):
+            try:
+                runner.main()
+            except SystemExit as exc:
+                assert exc.code == 1
+
+        assert "pack.json not found" in capsys.readouterr().err
+
+    def test_api_only_writes_rejected_result_for_unmappable_legacy_pack(self, tmp_path):
         runner = _load_prompt_lab_run()
         case_dir = tmp_path / "bad-case"
         case_dir.mkdir()
@@ -191,6 +230,34 @@ class TestPromptLabRun:
             api_key_env="ANTHROPIC_API_KEY",
         )
 
+        assert rc == 0
+        output = json.loads((case_dir / "run-bad.json").read_text(encoding="utf-8"))
+        assert output["review_status"] == "rejected"
+        assert output["reviewer"]["failure_reason"] == "input_invalid"
+
+    def test_api_only_returns_error_for_invalid_legacy_pack_shape(self, capsys, tmp_path):
+        runner = _load_prompt_lab_run()
+        case_dir = tmp_path / "bad-case"
+        case_dir.mkdir()
+        (case_dir / "pack.json").write_text(
+            json.dumps(
+                {
+                    "artifact_type": "code_diff",
+                    "diff": SAMPLE_DIFF,
+                    "changed_files": [],
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        rc = runner.run_api_only(
+            case_dir,
+            label="bad",
+            provider="anthropic",
+            model="claude-sonnet-4-20250514",
+            api_key_env="ANTHROPIC_API_KEY",
+        )
+
         assert rc == 1
-        assert "Invalid ReviewPack" in capsys.readouterr().err
+        assert "changed_files" in capsys.readouterr().err
         assert not (case_dir / "run-bad.json").exists()

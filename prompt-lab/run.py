@@ -28,6 +28,7 @@ from crossreview.schema import (
     ContextFile,
     Evidence,
     EvidenceStatus,
+    FileMeta,
     review_result_to_json,
     validate_review_result,
 )
@@ -37,19 +38,15 @@ from crossreview.verify import run_verify_pack
 def load_pack(case_dir: Path) -> dict:
     pack_path = case_dir / "pack.json"
     if not pack_path.exists():
-        print(f"Error: {pack_path} not found")
-        sys.exit(1)
+        raise ValueError(f"{pack_path} not found")
     pack = json.loads(pack_path.read_text(encoding="utf-8"))
 
     if pack.get("artifact_type") != "code_diff":
-        print(f"Error: artifact_type must be 'code_diff', got '{pack.get('artifact_type')}'")
-        sys.exit(1)
+        raise ValueError(f"artifact_type must be 'code_diff', got '{pack.get('artifact_type')}'")
     if not pack.get("diff", "").strip():
-        print("Error: pack.json 'diff' is empty")
-        sys.exit(1)
+        raise ValueError("pack.json 'diff' is empty")
     if not pack.get("changed_files"):
-        print("Error: pack.json 'changed_files' is empty")
-        sys.exit(1)
+        raise ValueError("pack.json 'changed_files' is empty")
 
     return pack
 
@@ -64,13 +61,28 @@ def load_review_pack(case_dir: Path):
     raw_pack = load_pack(case_dir)
     return assemble_pack(
         raw_pack["diff"],
-        changed_files=extract_changed_files(raw_pack["diff"]),
+        changed_files=_changed_files_from_legacy(raw_pack.get("changed_files"), raw_pack["diff"]),
         intent=raw_pack.get("intent"),
         task_file=raw_pack.get("task_file"),
         focus=raw_pack.get("focus"),
         context_files=_context_files_from_legacy(raw_pack.get("context_files")),
         evidence=_evidence_from_legacy(raw_pack.get("evidence")),
     )
+
+
+def _changed_files_from_legacy(value, diff: str) -> list[FileMeta]:
+    if not value:
+        return extract_changed_files(diff)
+    result: list[FileMeta] = []
+    for item in value:
+        if isinstance(item, str):
+            result.append(FileMeta(path=item))
+            continue
+        if isinstance(item, dict):
+            result.append(FileMeta(path=item["path"], language=item.get("language")))
+            continue
+        raise ValueError("pack.json 'changed_files' must contain strings or objects")
+    return result
 
 
 def _context_files_from_legacy(value) -> list[ContextFile] | None:
@@ -192,7 +204,11 @@ def main():
         ))
 
     template = load_prompt_lab_template()
-    pack = load_pack(case_dir)
+    try:
+        pack = load_pack(case_dir)
+    except ValueError as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        sys.exit(1)
     prompt = render_reviewer_prompt(template, pack)
 
     print(f"Case: {case_dir.name}")
