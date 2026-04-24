@@ -18,6 +18,20 @@ ReviewPack → fresh_llm_reviewer → FindingNormalizer → Adjudicator → Revi
 6. **Core 不选择模型** — core 接收 resolved ReviewerConfig，不内置默认供应商或模型。
 7. **Default review path is host-integrated same-model fresh session** — 当宿主提供 fresh-session reviewer backend 时，优先复用宿主当前模型做隔离审查；standalone provider backend 仅为 fallback / portable mode。
 
+## 数据隔离
+
+**Fixture 数据存放在 `eval-data` 分支**，不在 `main` 分支。
+
+- 原因：fixture 包含其他项目（hermes-agent, helloagents, graphify, ai-daily-brief）的真实 diff 和方案包数据
+- `main` 保持工具代码纯净，后续如需公开发布不含第三方项目数据
+- 若需更严格隔离，从 `eval-data` 分支拆为独立 private repo
+
+### Plan artifact 验证（v1+ 预留）
+
+- `eval-data` 分支 `fixtures/plan-preview/` 存放 plan artifact 的预备 case
+- v0 scope 锁定 code_diff，plan 验证的 prompt/eval/约束放松在 v1+ 实现
+- 第一个 case：`plan-preview/001-feishu-webhook`（来自 ai-daily-brief 飞书推送方案）
+
 ## Schema
 
 详见 [docs/v0-scope.md §7](../../docs/v0-scope.md)。
