@@ -1,0 +1,22 @@
+fixture_id: 001-hermes-subshell-leak
+source: assistant_local_review
+reviewer_model: codex
+reviewed_at: '2026-04-21T11:32:00+08:00'
+context_items:
+- type: diff
+  path_or_desc: prompt-lab/cases/001-hermes-subshell-leak/diff.patch
+  required: true
+  covered_by_pack: true
+findings:
+- id: mf-001
+  summary: _rewrite_compound_background rewrites valid same-line chains like `A &&
+    B & sleep 1` into invalid shell syntax because it assumes the background `&` always
+    ends the statement
+  file: tools/terminal_tool.py
+  severity_estimate: medium
+- id: mf-002
+  summary: _rewrite_compound_background resets chain state on any top-level newline,
+    so valid multiline forms like `A &&\nB &` are left unre-written and still hit
+    the subshell-wait leak
+  file: tools/terminal_tool.py
+  severity_estimate: low

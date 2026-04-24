@@ -1,0 +1,12 @@
+fixture_id: 012-hermes-tui-model-picker
+source: assistant_local_review
+reviewer_model: claude-opus-4.6
+reviewed_at: '2026-05-16T18:00:00+08:00'
+commit: ddd28329
+repo: hermes-agent
+context_items:
+- type: diff
+  path_or_desc: prompt-lab/cases/012-hermes-tui-model-picker/diff.patch
+  required: true
+  covered_by_pack: true
+findings: []

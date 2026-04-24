@@ -1,0 +1,8 @@
+fixture_id: 009-graphify-go-import-viz
+run_id: prompt-lab-r3-009-graphify-go-import-viz
+adjudicated_at: '2026-05-16'
+findings:
+- auto_finding_id: f-001
+  judgment: valid
+  matched_manual_id: mf-001
+  actionability_judgment: actionable

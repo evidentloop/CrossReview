@@ -1,0 +1,107 @@
+{
+  "schema_version": "0.1-alpha",
+  "artifact_fingerprint": "b08482bf37909d6f3615f08eea60744342990b9cbe2a393d9c2de05a63afd1eb",
+  "pack_fingerprint": "f797a13e2c538b28e92228d4aab22ce6dbdb10e194081c34607417ba52f60911",
+  "review_status": "complete",
+  "intent_coverage": "covered",
+  "raw_findings": [
+    {
+      "id": "f-001",
+      "severity": "medium",
+      "summary": "The escape-drift guard is entirely bypassed for exact-strategy matches, leaving the most common drift scenario unprotected.",
+      "detail": "When `old_string` exactly matches the file content, the strategy is `exact` and the condition `strategy_name != \"exact\"` evaluates to False, so `_detect_escape_drift` is never called. A model that reads the file correctly (exact match) but receives a transport-corrupted `new_string` with spurious `\\'` or `\\\"` will silently write those escape artifacts into the file. The test `test_drift_allowed_on_exact_match` only validates the sub-case where the file itself already contains `\\'` (legitimate preservation); it does not cover the gap case where the file has `'`, `old_string` correctly matches `'`, and `new_string` arrives with drifted `\\'`.",
+      "category": "logic_error",
+      "locatability": "exact",
+      "confidence": "plausible",
+      "evidence_related_file": false,
+      "actionable": true,
+      "file": "tools/fuzzy_match.py",
+      "line": 261,
+      "diff_hunk": null,
+      "requirement_ref": null
+    },
+    {
+      "id": "f-002",
+      "severity": "low",
+      "summary": "The drift guard also misses the case where only `new_string` carries the spurious escape while `old_string` is clean, even on non-exact (fuzzy) strategy paths.",
+      "detail": "The condition requires `suspect in old_string` to be True. If a non-exact strategy matched (e.g., whitespace normalization) and the model's `new_string` alone has a transport-introduced `\\'` but `old_string` does not, the loop condition is False and the guard returns `None`, allowing the corrupted replacement to proceed. The test `test_drift_allowed_when_adding_escaped_strings` explicitly documents and approves this bypass path (asserting `err is None` when only `new_string` has `\\'`), but the test comment attributes the pass to \"old_string has no `\\\\'`\" rather than clarifying that the exact-strategy bypass (f-001) is the actual mechanism — which obscures whether the fuzzy-path gap was intentional.",
+      "category": "logic_error",
+      "locatability": "exact",
+      "confidence": "speculative",
+      "evidence_related_file": false,
+      "actionable": false,
+      "file": "tools/fuzzy_match.py",
+      "line": 299,
+      "diff_hunk": null,
+      "requirement_ref": null
+    }
+  ],
+  "findings": [
+    {
+      "id": "f-001",
+      "severity": "medium",
+      "summary": "The escape-drift guard is entirely bypassed for exact-strategy matches, leaving the most common drift scenario unprotected.",
+      "detail": "When `old_string` exactly matches the file content, the strategy is `exact` and the condition `strategy_name != \"exact\"` evaluates to False, so `_detect_escape_drift` is never called. A model that reads the file correctly (exact match) but receives a transport-corrupted `new_string` with spurious `\\'` or `\\\"` will silently write those escape artifacts into the file. The test `test_drift_allowed_on_exact_match` only validates the sub-case where the file itself already contains `\\'` (legitimate preservation); it does not cover the gap case where the file has `'`, `old_string` correctly matches `'`, and `new_string` arrives with drifted `\\'`.",
+      "category": "logic_error",
+      "locatability": "exact",
+      "confidence": "plausible",
+      "evidence_related_file": false,
+      "actionable": true,
+      "file": "tools/fuzzy_match.py",
+      "line": 261,
+      "diff_hunk": null,
+      "requirement_ref": null
+    },
+    {
+      "id": "f-002",
+      "severity": "low",
+      "summary": "The drift guard also misses the case where only `new_string` carries the spurious escape while `old_string` is clean, even on non-exact (fuzzy) strategy paths.",
+      "detail": "The condition requires `suspect in old_string` to be True. If a non-exact strategy matched (e.g., whitespace normalization) and the model's `new_string` alone has a transport-introduced `\\'` but `old_string` does not, the loop condition is False and the guard returns `None`, allowing the corrupted replacement to proceed. The test `test_drift_allowed_when_adding_escaped_strings` explicitly documents and approves this bypass path (asserting `err is None` when only `new_string` has `\\'`), but the test comment attributes the pass to \"old_string has no `\\\\'`\" rather than clarifying that the exact-strategy bypass (f-001) is the actual mechanism — which obscures whether the fuzzy-path gap was intentional.",
+      "category": "logic_error",
+      "locatability": "exact",
+      "confidence": "speculative",
+      "evidence_related_file": false,
+      "actionable": false,
+      "file": "tools/fuzzy_match.py",
+      "line": 299,
+      "diff_hunk": null,
+      "requirement_ref": null
+    }
+  ],
+  "evidence": [],
+  "advisory_verdict": {
+    "verdict": "concerns",
+    "rationale": "review found medium/high-severity issues"
+  },
+  "quality_metrics": {
+    "pack_completeness": 0.75,
+    "noise_count": 0,
+    "raw_findings_count": 2,
+    "emitted_findings_count": 2,
+    "locatability_distribution": {
+      "exact_pct": 1.0,
+      "file_only_pct": 0.0,
+      "none_pct": 0.0
+    },
+    "speculative_ratio": 0.5
+  },
+  "reviewer": {
+    "type": "fresh_llm",
+    "model": "claude-sonnet-4-20250514",
+    "session_isolated": true,
+    "failure_reason": null,
+    "raw_analysis": "# Reviewer Output — Case 005 (hermes-patch-hardening)\n# Round: R3 (v0.3 prompt)\n# Reviewer: claude-sonnet-4.6 (tool-assisted)\n\n## Section 1: Findings\n\n**f-001**\n- **Where**: `tools/fuzzy_match.py`, line 261 (`if strategy_name != \"exact\":`)\n- **What**: The escape-drift guard is entirely bypassed for exact-strategy matches, leaving the most common drift scenario unprotected.\n- **Why**: When `old_string` exactly matches the file content, the strategy is `exact` and the condition `strategy_name != \"exact\"` evaluates to False, so `_detect_escape_drift` is never called. A model that reads the file correctly (exact match) but receives a transport-corrupted `new_string` with spurious `\\'` or `\\\"` will silently write those escape artifacts into the file. The test `test_drift_allowed_on_exact_match` only validates the sub-case where the file itself already contains `\\'` (legitimate preservation); it does not cover the gap case where the file has `'`, `old_string` correctly matches `'`, and `new_string` arrives with drifted `\\'`.\n- **Severity estimate**: MEDIUM\n- **Category**: logic_error\n\n**f-002**\n- **Where**: `tools/fuzzy_match.py`, line 299 (`if suspect in new_string and suspect in old_string and suspect not in matched_regions`)\n- **What**: The drift guard also misses the case where only `new_string` carries the spurious escape while `old_string` is clean, even on non-exact (fuzzy) strategy paths.\n- **Why**: The condition requires `suspect in old_string` to be True. If a non-exact strategy matched (e.g., whitespace normalization) and the model's `new_string` alone has a transport-introduced `\\'` but `old_string` does not, the loop condition is False and the guard returns `None`, allowing the corrupted replacement to proceed. The test `test_drift_allowed_when_adding_escaped_strings` explicitly documents and approves this bypass path (asserting `err is None` when only `new_string` has `\\'`), but the test comment attributes the pass to \"old_string has no `\\\\'`\" rather than clarifying that the exact-strategy bypass (f-001) is the actual mechanism — which obscures whether the fuzzy-path gap was intentional.\n- **Severity estimate**: LOW\n- **Category**: logic_error\n\n## Section 2: Observations\n\n**o-001**\n- **Where**: `tools/file_operations.py`, post-write verification block (lines ~228–238)\n- **What**: The comparison `verify_result.stdout != new_content` assumes `_exec` returns stdout with no trailing-newline stripping or encoding transformation; if the shell capture strips a terminal newline, verification would fail spuriously on files that end with `\\n`.\n- **Why**: Requires seeing the `_exec` implementation (not in this diff) to confirm how stdout bytes are returned as a Python string.\n\n**o-002**\n- **Where**: `tests/tools/test_file_operations.py`, `test_patch_replace_fails_when_file_not_persisted`\n- **What**: The mock's `side_effect` returns `{\"output\": ..., \"returncode\": 0}` (dict), but production code accesses `.exit_code` on `verify_result`; if `_exec` wraps the result in an object whose attribute is `.exit_code`, not `.returncode`, the mock may not exercise the correct code path.\n- **Why**: Requires seeing `_exec` and how it wraps subprocess output to confirm attribute naming.\n\n## Section 3: Overall Assessment\n\nThe post-write verification in `file_operations.py` is clear, well-commented, and has a comprehensive test suite covering success, silent-failure, and verify-read-error paths. The escape-drift guard in `fuzzy_match.py` is a thoughtful addition with good test coverage for the core \"both strings have the suspect\" scenario and the \"file already has escape\" false-positive case. However, the guard has two bypass paths that together cover the typical real-world drift scenario: (1) exact-strategy matches skip the guard entirely via an explicit `strategy_name != \"exact\"` check, and (2) on non-exact paths, the guard requires the suspect to appear in `old_string`, missing the case where only `new_string` is corrupted. The most dangerous drift scenario — model reads file correctly, transport corrupts only the replacement text — falls entirely in bypass path (1). These are genuine logic gaps rather than cosmetic issues.\n",
+    "latency_sec": null,
+    "input_tokens": null,
+    "output_tokens": null,
+    "prompt_source": "product",
+    "prompt_version": "v0.1"
+  },
+  "budget": {
+    "status": "complete",
+    "files_reviewed": 4,
+    "files_total": 4,
+    "chars_consumed": 15273,
+    "chars_limit": null
+  }
+}

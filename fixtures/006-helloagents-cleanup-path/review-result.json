@@ -1,0 +1,107 @@
+{
+  "schema_version": "0.1-alpha",
+  "artifact_fingerprint": "d5922dff2bd223cbcee0d8c2bcb90939d311337fdc92f46eba049523a33e6a19",
+  "pack_fingerprint": "e5e65b3dd7e3278382d9ba7120fde5ac571bf476adbc2530e6d04454a590f1a1",
+  "review_status": "complete",
+  "intent_coverage": "covered",
+  "raw_findings": [
+    {
+      "id": "f-001",
+      "severity": "low",
+      "summary": "`isManagedCodexModelInstruction` uses substring matching on `'helloagents'` to classify a backup TOML line as managed, which would silently clear a user-owned `model_instructions_file` whose path incidentally contains `'helloagents'`.",
+      "detail": "The function returns `true` for any line where `line.includes('helloagents') && line.includes('model_instructions_file')`. A user who had, before ever installing helloagents, set `model_instructions_file = \"/home/user/.helloagents/custom.md\"` would have that value in the backup. On uninstall, `isManagedCodexModelInstruction(backupModelInstructions)` returns `true`, the condition becomes `'' : backupModelInstructions`, and the value is cleared to empty instead of restored. The new test at `tests/install-lifecycle.test.mjs` line 175 covers only the scenario where the backup is genuinely a helloagents-installed value; it does not cover the false-positive case.",
+      "category": "logic_error",
+      "locatability": "exact",
+      "confidence": "speculative",
+      "evidence_related_file": false,
+      "actionable": false,
+      "file": "scripts/cli-codex.mjs",
+      "line": 89,
+      "diff_hunk": null,
+      "requirement_ref": null
+    },
+    {
+      "id": "f-002",
+      "severity": "medium",
+      "summary": "Both `\"preuninstall\"` (pre-existing) and the new `\"postuninstall\"` invoke `node cli.mjs preuninstall`, causing the cleanup logic to run twice during `npm uninstall`, with the second run executing after the package directory has been removed by npm.",
+      "detail": "npm lifecycle order for `npm uninstall` is `preuninstall` → (package removed) → `postuninstall`. The pre-existing `\"preuninstall\": \"node cli.mjs preuninstall\"` already handles cleanup before the package is removed. The new `\"postuninstall\": \"node cli.mjs preuninstall\"` runs the same `cli.mjs preuninstall` command *after* npm has deleted the package directory; at that point, `cli.mjs` and its dependencies may no longer exist, causing the postuninstall step to fail with a module-not-found error. The `\"uninstall\"` script on the adjacent line is not a standard npm lifecycle hook and would only run if someone explicitly invokes `npm run uninstall`.",
+      "category": "logic_error",
+      "locatability": "file_only",
+      "confidence": "speculative",
+      "evidence_related_file": false,
+      "actionable": false,
+      "file": "package.json",
+      "line": null,
+      "diff_hunk": null,
+      "requirement_ref": null
+    }
+  ],
+  "findings": [
+    {
+      "id": "f-002",
+      "severity": "medium",
+      "summary": "Both `\"preuninstall\"` (pre-existing) and the new `\"postuninstall\"` invoke `node cli.mjs preuninstall`, causing the cleanup logic to run twice during `npm uninstall`, with the second run executing after the package directory has been removed by npm.",
+      "detail": "npm lifecycle order for `npm uninstall` is `preuninstall` → (package removed) → `postuninstall`. The pre-existing `\"preuninstall\": \"node cli.mjs preuninstall\"` already handles cleanup before the package is removed. The new `\"postuninstall\": \"node cli.mjs preuninstall\"` runs the same `cli.mjs preuninstall` command *after* npm has deleted the package directory; at that point, `cli.mjs` and its dependencies may no longer exist, causing the postuninstall step to fail with a module-not-found error. The `\"uninstall\"` script on the adjacent line is not a standard npm lifecycle hook and would only run if someone explicitly invokes `npm run uninstall`.",
+      "category": "logic_error",
+      "locatability": "file_only",
+      "confidence": "speculative",
+      "evidence_related_file": false,
+      "actionable": false,
+      "file": "package.json",
+      "line": null,
+      "diff_hunk": null,
+      "requirement_ref": null
+    },
+    {
+      "id": "f-001",
+      "severity": "low",
+      "summary": "`isManagedCodexModelInstruction` uses substring matching on `'helloagents'` to classify a backup TOML line as managed, which would silently clear a user-owned `model_instructions_file` whose path incidentally contains `'helloagents'`.",
+      "detail": "The function returns `true` for any line where `line.includes('helloagents') && line.includes('model_instructions_file')`. A user who had, before ever installing helloagents, set `model_instructions_file = \"/home/user/.helloagents/custom.md\"` would have that value in the backup. On uninstall, `isManagedCodexModelInstruction(backupModelInstructions)` returns `true`, the condition becomes `'' : backupModelInstructions`, and the value is cleared to empty instead of restored. The new test at `tests/install-lifecycle.test.mjs` line 175 covers only the scenario where the backup is genuinely a helloagents-installed value; it does not cover the false-positive case.",
+      "category": "logic_error",
+      "locatability": "exact",
+      "confidence": "speculative",
+      "evidence_related_file": false,
+      "actionable": false,
+      "file": "scripts/cli-codex.mjs",
+      "line": 89,
+      "diff_hunk": null,
+      "requirement_ref": null
+    }
+  ],
+  "evidence": [],
+  "advisory_verdict": {
+    "verdict": "concerns",
+    "rationale": "review output was too speculative to justify pass_candidate"
+  },
+  "quality_metrics": {
+    "pack_completeness": 0.75,
+    "noise_count": 0,
+    "raw_findings_count": 2,
+    "emitted_findings_count": 2,
+    "locatability_distribution": {
+      "exact_pct": 0.5,
+      "file_only_pct": 0.5,
+      "none_pct": 0.0
+    },
+    "speculative_ratio": 1.0
+  },
+  "reviewer": {
+    "type": "fresh_llm",
+    "model": "claude-sonnet-4-20250514",
+    "session_isolated": true,
+    "failure_reason": null,
+    "raw_analysis": "# Reviewer Output — Case 006 (helloagents-cleanup-path)\n# Round: R3 (v0.3 prompt)\n# Reviewer: claude-sonnet-4.6 (tool-assisted)\n\n## Section 1: Findings\n\n**f-001**\n- **Where**: `scripts/cli-codex.mjs`, lines 84–86 (`isManagedCodexModelInstruction`) and line 89 (`isManagedCodexNotify`)\n- **What**: `isManagedCodexModelInstruction` uses substring matching on `'helloagents'` to classify a backup TOML line as managed, which would silently clear a user-owned `model_instructions_file` whose path incidentally contains `'helloagents'`.\n- **Why**: The function returns `true` for any line where `line.includes('helloagents') && line.includes('model_instructions_file')`. A user who had, before ever installing helloagents, set `model_instructions_file = \"/home/user/.helloagents/custom.md\"` would have that value in the backup. On uninstall, `isManagedCodexModelInstruction(backupModelInstructions)` returns `true`, the condition becomes `'' : backupModelInstructions`, and the value is cleared to empty instead of restored. The new test at `tests/install-lifecycle.test.mjs` line 175 covers only the scenario where the backup is genuinely a helloagents-installed value; it does not cover the false-positive case.\n- **Severity estimate**: LOW\n- **Category**: logic_error\n\n**f-002**\n- **Where**: `package.json`, lines 71–72 (`\"uninstall\"` and `\"postuninstall\"` scripts)\n- **What**: Both `\"preuninstall\"` (pre-existing) and the new `\"postuninstall\"` invoke `node cli.mjs preuninstall`, causing the cleanup logic to run twice during `npm uninstall`, with the second run executing after the package directory has been removed by npm.\n- **Why**: npm lifecycle order for `npm uninstall` is `preuninstall` → (package removed) → `postuninstall`. The pre-existing `\"preuninstall\": \"node cli.mjs preuninstall\"` already handles cleanup before the package is removed. The new `\"postuninstall\": \"node cli.mjs preuninstall\"` runs the same `cli.mjs preuninstall` command *after* npm has deleted the package directory; at that point, `cli.mjs` and its dependencies may no longer exist, causing the postuninstall step to fail with a module-not-found error. The `\"uninstall\"` script on the adjacent line is not a standard npm lifecycle hook and would only run if someone explicitly invokes `npm run uninstall`.\n- **Severity estimate**: MEDIUM\n- **Category**: logic_error\n\n## Section 2: Observations\n\n**o-001**\n- **Where**: `cli.mjs`, line 53 (`uninstallAll()`)\n- **What**: The new `cleanup` command calls `uninstallAll()` directly, but it is unclear whether this function covers the same paths as the existing `preuninstall` handler or only a subset.\n- **Why**: Requires seeing the `uninstallAll` definition (not in this diff) to confirm scope equivalence.\n\n**o-002**\n- **Where**: `tests/helpers/test-env.mjs`, lines 156–166 (`runNode` refactor)\n- **What**: The diff shows only the first line of the original `runNode` body being replaced; if the original function had additional post-`spawnSync` logic that is not reproduced in the new `runCommand`, the refactor is not semantically equivalent.\n- **Why**: The hunk context does not show the full original `runNode` body. If the original had result-processing lines after `spawnSync`, they would need to appear in `runCommand` to preserve semantics.\n\n## Section 3: Overall Assessment\n\nThe cleanup command and documentation updates are straightforward and well-tested by the new `npm-lifecycle.test.mjs`. The `isManagedCodexModelInstruction` guard (f-001) is a reasonable first-pass implementation that handles the primary regression case (re-install then uninstall) but has a low-probability false-positive exposure for users whose pre-existing config paths happen to contain 'helloagents'. More critically, the `postuninstall` lifecycle hook (f-002) runs `cli.mjs preuninstall` after npm has removed the package directory, which is both redundant and likely to fail at module resolution. The test for the new lifecycle hook uses a controlled environment where the package directory remains intact throughout, so this failure mode is not exercised by the added tests.\n",
+    "latency_sec": null,
+    "input_tokens": null,
+    "output_tokens": null,
+    "prompt_source": "product",
+    "prompt_version": "v0.1"
+  },
+  "budget": {
+    "status": "complete",
+    "files_reviewed": 9,
+    "files_total": 9,
+    "chars_consumed": 11804,
+    "chars_limit": null
+  }
+}

@@ -1,0 +1,137 @@
+{
+  "schema_version": "0.1-alpha",
+  "artifact_fingerprint": "037db7492542cb27421c6ea50e6088bc984323e0e329789c4310295596708cb9",
+  "pack_fingerprint": "a17fb5d6dc79548f9fd21fea5035dc073acf899c6b32f03f70c19ff26e587fb5",
+  "review_status": "complete",
+  "intent_coverage": "covered",
+  "raw_findings": [
+    {
+      "id": "f-001",
+      "severity": "low",
+      "summary": "`_normalize_list` returns an empty list when passed a plain string, silently dropping the entire value instead of normalising it.",
+      "detail": "`isinstance(\"focus area text\", list)` is `False`, so the function returns `[]`. The caller then does `\", \".join([])` → `\"\"` → `\"(no focus specified)\"`. If a pack.json encodes `focus` as a string (`\"terminal, process management\"`) rather than a list, the value is silently lost and the prompt renders no focus area. The old code (`\", \".join(pack.get(\"focus\", []))`) would have produced garbled output for a string input too, but the new function advertises itself as a normaliser while actually discarding the value.",
+      "category": "logic_error",
+      "locatability": "file_only",
+      "confidence": "speculative",
+      "evidence_related_file": false,
+      "actionable": false,
+      "file": "prompt-lab/run.py",
+      "line": null,
+      "diff_hunk": null,
+      "requirement_ref": null
+    },
+    {
+      "id": "f-002",
+      "severity": "low",
+      "summary": "Non-string items (e.g., dicts, FileMeta objects) are converted with `str(item)`, which produces Python `repr`-style strings (`{'key': 'value'}`) rather than JSON or any human-readable format.",
+      "detail": "The diff shows `str(item)` is used for non-string list elements. For a dict like `{\"type\": \"function\", \"name\": \"foo\"}`, `str({\"type\": \"function\", \"name\": \"foo\"})` returns `\"{'type': 'function', 'name': 'foo'}\"` — single-quoted Python repr, not double-quoted JSON. This repr would be injected literally into the reviewer prompt as a changed-file name or focus area, producing confusing or misleading prompt content. `json.dumps(item)` or `item.get(\"path\", str(item))` would be more appropriate depending on the expected schema.",
+      "category": "logic_error",
+      "locatability": "file_only",
+      "confidence": "plausible",
+      "evidence_related_file": false,
+      "actionable": true,
+      "file": "prompt-lab/run.py",
+      "line": null,
+      "diff_hunk": null,
+      "requirement_ref": null
+    },
+    {
+      "id": "f-003",
+      "severity": "medium",
+      "summary": "The `changed_files` replacement uses a hardcoded literal match (the full comma-separated file list of this exact diff) rather than a template placeholder, making the replacement fragile.",
+      "detail": "The diff shows: `.replace(\".gitignore, .sopify-skills/plan/..., pyproject.toml\", \", \".join(changed_files))`. This replacement only fires if the rendered template contains that exact comma-separated string. For any other case (a different pack.json whose changed_files renders differently, or if the template is updated), the replacement silently fails and the literal hardcoded string remains in the prompt. The other two template variables (`{intent}`, `{focus}`, `{diff}`) use proper `{placeholder}` syntax.",
+      "category": "logic_error",
+      "locatability": "file_only",
+      "confidence": "speculative",
+      "evidence_related_file": false,
+      "actionable": false,
+      "file": "prompt-lab/run.py",
+      "line": null,
+      "diff_hunk": null,
+      "requirement_ref": null
+    }
+  ],
+  "findings": [
+    {
+      "id": "f-003",
+      "severity": "medium",
+      "summary": "The `changed_files` replacement uses a hardcoded literal match (the full comma-separated file list of this exact diff) rather than a template placeholder, making the replacement fragile.",
+      "detail": "The diff shows: `.replace(\".gitignore, .sopify-skills/plan/..., pyproject.toml\", \", \".join(changed_files))`. This replacement only fires if the rendered template contains that exact comma-separated string. For any other case (a different pack.json whose changed_files renders differently, or if the template is updated), the replacement silently fails and the literal hardcoded string remains in the prompt. The other two template variables (`{intent}`, `{focus}`, `{diff}`) use proper `{placeholder}` syntax.",
+      "category": "logic_error",
+      "locatability": "file_only",
+      "confidence": "speculative",
+      "evidence_related_file": false,
+      "actionable": false,
+      "file": "prompt-lab/run.py",
+      "line": null,
+      "diff_hunk": null,
+      "requirement_ref": null
+    },
+    {
+      "id": "f-001",
+      "severity": "low",
+      "summary": "`_normalize_list` returns an empty list when passed a plain string, silently dropping the entire value instead of normalising it.",
+      "detail": "`isinstance(\"focus area text\", list)` is `False`, so the function returns `[]`. The caller then does `\", \".join([])` → `\"\"` → `\"(no focus specified)\"`. If a pack.json encodes `focus` as a string (`\"terminal, process management\"`) rather than a list, the value is silently lost and the prompt renders no focus area. The old code (`\", \".join(pack.get(\"focus\", []))`) would have produced garbled output for a string input too, but the new function advertises itself as a normaliser while actually discarding the value.",
+      "category": "logic_error",
+      "locatability": "file_only",
+      "confidence": "speculative",
+      "evidence_related_file": false,
+      "actionable": false,
+      "file": "prompt-lab/run.py",
+      "line": null,
+      "diff_hunk": null,
+      "requirement_ref": null
+    },
+    {
+      "id": "f-002",
+      "severity": "low",
+      "summary": "Non-string items (e.g., dicts, FileMeta objects) are converted with `str(item)`, which produces Python `repr`-style strings (`{'key': 'value'}`) rather than JSON or any human-readable format.",
+      "detail": "The diff shows `str(item)` is used for non-string list elements. For a dict like `{\"type\": \"function\", \"name\": \"foo\"}`, `str({\"type\": \"function\", \"name\": \"foo\"})` returns `\"{'type': 'function', 'name': 'foo'}\"` — single-quoted Python repr, not double-quoted JSON. This repr would be injected literally into the reviewer prompt as a changed-file name or focus area, producing confusing or misleading prompt content. `json.dumps(item)` or `item.get(\"path\", str(item))` would be more appropriate depending on the expected schema.",
+      "category": "logic_error",
+      "locatability": "file_only",
+      "confidence": "plausible",
+      "evidence_related_file": false,
+      "actionable": true,
+      "file": "prompt-lab/run.py",
+      "line": null,
+      "diff_hunk": null,
+      "requirement_ref": null
+    }
+  ],
+  "evidence": [],
+  "advisory_verdict": {
+    "verdict": "concerns",
+    "rationale": "review output was too speculative to justify pass_candidate"
+  },
+  "quality_metrics": {
+    "pack_completeness": 0.75,
+    "noise_count": 0,
+    "raw_findings_count": 3,
+    "emitted_findings_count": 3,
+    "locatability_distribution": {
+      "exact_pct": 0.0,
+      "file_only_pct": 1.0,
+      "none_pct": 0.0
+    },
+    "speculative_ratio": 0.67
+  },
+  "reviewer": {
+    "type": "fresh_llm",
+    "model": "claude-sonnet-4-20250514",
+    "session_isolated": true,
+    "failure_reason": null,
+    "raw_analysis": "<!-- model: claude-sonnet-4.6 (context-isolated independent reviewer) | round: 3 | template: v0.3 -->\n\n## Section 1: Findings\n\n### f-001\n- **Where**: `prompt-lab/run.py`, `_normalize_list`, type guard\n- **What**: `_normalize_list` returns an empty list when passed a plain string, silently dropping the entire value instead of normalising it.\n- **Why**: `isinstance(\"focus area text\", list)` is `False`, so the function returns `[]`. The caller then does `\", \".join([])` → `\"\"` → `\"(no focus specified)\"`. If a pack.json encodes `focus` as a string (`\"terminal, process management\"`) rather than a list, the value is silently lost and the prompt renders no focus area. The old code (`\", \".join(pack.get(\"focus\", []))`) would have produced garbled output for a string input too, but the new function advertises itself as a normaliser while actually discarding the value.\n- **Severity estimate**: LOW\n- **Category**: logic_error\n\n### f-002\n- **Where**: `prompt-lab/run.py`, `_normalize_list`, non-string item handling\n- **What**: Non-string items (e.g., dicts, FileMeta objects) are converted with `str(item)`, which produces Python `repr`-style strings (`{'key': 'value'}`) rather than JSON or any human-readable format.\n- **Why**: The diff shows `str(item)` is used for non-string list elements. For a dict like `{\"type\": \"function\", \"name\": \"foo\"}`, `str({\"type\": \"function\", \"name\": \"foo\"})` returns `\"{'type': 'function', 'name': 'foo'}\"` — single-quoted Python repr, not double-quoted JSON. This repr would be injected literally into the reviewer prompt as a changed-file name or focus area, producing confusing or misleading prompt content. `json.dumps(item)` or `item.get(\"path\", str(item))` would be more appropriate depending on the expected schema.\n- **Severity estimate**: LOW\n- **Category**: logic_error\n\n### f-003\n- **Where**: `prompt-lab/run.py`, `build_prompt`, `.replace(...)` for `changed_files`\n- **What**: The `changed_files` replacement uses a hardcoded literal match (the full comma-separated file list of this exact diff) rather than a template placeholder, making the replacement fragile.\n- **Why**: The diff shows: `.replace(\".gitignore, .sopify-skills/plan/..., pyproject.toml\", \", \".join(changed_files))`. This replacement only fires if the rendered template contains that exact comma-separated string. For any other case (a different pack.json whose changed_files renders differently, or if the template is updated), the replacement silently fails and the literal hardcoded string remains in the prompt. The other two template variables (`{intent}`, `{focus}`, `{diff}`) use proper `{placeholder}` syntax.\n- **Severity estimate**: MEDIUM\n- **Category**: logic_error\n\n---\n\n## Section 2: Observations\n\n### o-001\n- **Where**: `prompt-lab/run.py`, `main()`, non-render-only path\n- **What**: The updated usage comment `python run.py cases/001-auth-refresh # Call LLM directly` implies the non-render-only path is functional, but `call_reviewer` is not visible in this diff.\n- **Why**: Whether `call_reviewer` is implemented or still raises `NotImplementedError` cannot be verified from the diff. If it is unimplemented, the comment is misleading.\n\n### o-002\n- **Where**: `.gitignore`\n- **What**: The pattern changed from `raw-output-*.md` to `raw-output.md` — the new pattern no longer ignores versioned outputs like `raw-output-r1.md` or `raw-output-r2.md`.\n- **Why**: If the intended workflow produces versioned output files (e.g., `raw-output-r2.md`), those files would now be tracked rather than ignored. Whether this is intentional (keeping versioned outputs in git) or accidental (pattern narrowed too far) requires knowing the intended naming convention for reviewer outputs.\n\n### o-003\n- **Where**: `pyproject.toml`\n- **What**: `build-backend` changed from `setuptools.backends._legacy:_Backend` to `setuptools.build_meta`.\n- **Why**: The legacy backend was used for compatibility; switching to the standard `setuptools.build_meta` is generally correct for modern setuptools, but if the project has dependencies on legacy metadata behaviour (e.g., `setup.py`-only options), the build might behave differently. Cannot confirm without seeing the full pyproject.toml.\n\n---\n\n## Section 3: Overall Assessment\n\nThis diff is a multi-fix batch addressing 9 review items. Most changes are straightforward and clearly correct: relative path fixes, gitignore updates, documentation improvements, and the `.gitkeep` addition. The substantive code change is `_normalize_list` and the related `build_prompt` refactoring. Two issues exist: f-001 (silent empty-list return for string inputs) and f-002 (Python repr for dict items instead of JSON), both introduced by the new `_normalize_list`. More critically, f-003 identifies that the `changed_files` template replacement uses a hardcoded literal instead of a proper placeholder — a fragile pattern that would silently break for any pack.json with a different file list. The README anchor fix and build backend fix appear correct.\n",
+    "latency_sec": null,
+    "input_tokens": null,
+    "output_tokens": null,
+    "prompt_source": "product",
+    "prompt_version": "v0.1"
+  },
+  "budget": {
+    "status": "complete",
+    "files_reviewed": 9,
+    "files_total": 9,
+    "chars_consumed": 6944,
+    "chars_limit": null
+  }
+}

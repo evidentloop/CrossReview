@@ -1,0 +1,23 @@
+fixture_id: 013-graphify-version-stamp
+source: assistant_local_review
+reviewer_model: claude-opus-4.6
+reviewed_at: '2026-05-16T18:00:00+08:00'
+commit: 42599a7
+repo: graphify
+context_items:
+- type: diff
+  path_or_desc: prompt-lab/cases/013-graphify-version-stamp/diff.patch
+  required: true
+  covered_by_pack: true
+findings:
+- id: mf-001
+  summary: _refresh_all_version_stamps() is only called from the generic install(platform=...)
+    function in __main__.py. The diff shows that platform-specific install subcommands
+    (visible in the same file's main() function, e.g. the gemini/cursor/vscode/kiro/codex
+    branches) each have their own install paths that do NOT call _refresh_all_version_stamps().
+    This means the 'fix stale version stamp' only works when the user runs the generic
+    `graphify install` — users who run platform-specific variants still get stale
+    warnings on other previously-installed platforms.
+  file: graphify/__main__.py
+  severity_estimate: low
+  evidence_line_approx: _refresh_all_version_stamps()

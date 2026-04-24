@@ -1,0 +1,12 @@
+fixture_id: 007-graphify-pipx-readme
+source: assistant_local_review
+reviewer_model: claude-sonnet-4.6
+reviewed_at: '2026-05-16T10:00:00+08:00'
+commit: baa4474
+repo: graphify
+context_items:
+- type: diff
+  path_or_desc: prompt-lab/cases/007-graphify-pipx-readme/diff.patch
+  required: true
+  covered_by_pack: true
+findings: []

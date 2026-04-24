@@ -1,0 +1,19 @@
+fixture_id: 009-graphify-go-import-viz
+source: assistant_local_review
+reviewer_model: claude-opus-4.6
+reviewed_at: '2026-04-21T14:55:00+08:00'
+commit: 8d908c5
+repo: graphify
+context_items:
+- type: diff
+  path_or_desc: prompt-lab/cases/009-graphify-go-import-viz/diff.patch
+  required: true
+  covered_by_pack: true
+findings:
+- id: mf-001
+  summary: Diff introduces a new ValueError fallback and stale-file cleanup path in
+    _rebuild_code without adding a targeted regression test for either the fallback-continues-successfully
+    behavior or the stale graph.html deletion.
+  file: graphify/watch.py
+  severity_estimate: low
+  evidence_line_approx: 'except ValueError as viz_err:'

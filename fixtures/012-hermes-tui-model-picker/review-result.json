@@ -1,0 +1,45 @@
+{
+  "schema_version": "0.1-alpha",
+  "artifact_fingerprint": "95f238e81f208c997e0f1e7d6b8dbd90d148915a54a2b8cb92cab57c0e8eb070",
+  "pack_fingerprint": "b49bf901a9b2d7a83c5ce08c3cf5479ae5e57dabdd8cd0e1acc60e19470b5e05",
+  "review_status": "complete",
+  "intent_coverage": "covered",
+  "raw_findings": [],
+  "findings": [],
+  "evidence": [],
+  "advisory_verdict": {
+    "verdict": "pass_candidate",
+    "rationale": "no findings and pack completeness is sufficient for advisory pass"
+  },
+  "quality_metrics": {
+    "pack_completeness": 0.75,
+    "noise_count": 0,
+    "raw_findings_count": 0,
+    "emitted_findings_count": 0,
+    "locatability_distribution": {
+      "exact_pct": 0.0,
+      "file_only_pct": 0.0,
+      "none_pct": 0.0
+    },
+    "speculative_ratio": 0.0
+  },
+  "reviewer": {
+    "type": "fresh_llm",
+    "model": "claude-sonnet-4-20250514",
+    "session_isolated": true,
+    "failure_reason": null,
+    "raw_analysis": "# Reviewer Output — Case 012 (hermes-tui-model-picker)\n# Round: R3 (v0.3 prompt)\n# Reviewer: claude-opus-4.6 (tool-assisted)\n\n## Section 1: Findings\n\nNo findings identified.\n\nThe diff removes the `provider_model_ids` import and the code path that overwrote each provider's curated `models` list with the live `/models` catalog. The remaining code uses `list_authenticated_providers` as the single source of truth for model lists, which the comment confirms already populates each provider's curated models. The two regression tests are well-targeted: one verifies that the curated models survive intact and `provider_model_ids` is never called, the other verifies that `list_authenticated_providers` exceptions surface as RPC errors (code 5033) rather than being swallowed.\n\n## Section 2: Observations\n\n**o-001**\n- **Where**: `tui_gateway/server.py`, the model.options handler\n- **What**: The handler now depends entirely on `list_authenticated_providers` for its provider list; if that function returns an empty list (e.g., no providers configured), the TUI picker would show zero options with no user-visible guidance.\n- **Why**: Whether the empty-provider case is handled at the TUI layer (showing a \"configure a provider\" message) requires seeing the TUI client code, which is not in this diff.\n\n## Section 3: Overall Assessment\n\nThis is a clean, targeted regression fix. The problematic code path — overwriting curated model lists with the live catalog, which pulled in hundreds of non-agentic models — is simply removed. The fix is correct by construction: less code, single truth source, no new logic that could introduce bugs. The test coverage pins both the happy path (curated models preserved, live catalog not consulted) and the error path (exception propagation). No issues found.\n",
+    "latency_sec": null,
+    "input_tokens": null,
+    "output_tokens": null,
+    "prompt_source": "product",
+    "prompt_version": "v0.1"
+  },
+  "budget": {
+    "status": "complete",
+    "files_reviewed": 2,
+    "files_total": 2,
+    "chars_consumed": 5315,
+    "chars_limit": null
+  }
+}

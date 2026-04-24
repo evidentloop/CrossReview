@@ -1,0 +1,22 @@
+fixture_id: 010-helloagents-codex-sanitize
+source: assistant_local_review
+reviewer_model: claude-opus-4.6
+reviewed_at: '2026-04-21T14:55:00+08:00'
+commit: d7a3bb7
+repo: helloagents
+context_items:
+- type: diff
+  path_or_desc: prompt-lab/cases/010-helloagents-codex-sanitize/diff.patch
+  required: true
+  covered_by_pack: true
+findings:
+- id: mf-001
+  summary: removeCodexMarketplaceEntry returns `removedHelloagents || true` which
+    is a tautology (always true). When the marketplace file is empty and managed but
+    helloagents was never in the plugins array, removedHelloagents is false yet the
+    function returns true, conflating 'cleaned up an empty file' with 'removed a helloagents
+    entry'. Callers that use the return value to determine whether helloagents was
+    actually present get a false positive.
+  file: scripts/cli-codex.mjs
+  severity_estimate: low
+  evidence_line_approx: return removedHelloagents || true;

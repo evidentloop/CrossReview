@@ -1,0 +1,107 @@
+{
+  "schema_version": "0.1-alpha",
+  "artifact_fingerprint": "ed9d157932dc3fad44e2c14126bff0fb29776355dc5d8938ac9e0ec82a8cd2a7",
+  "pack_fingerprint": "47e38ce504d933aff35aea1c8b9110e2f39d426dac32250536d6aa957fa9bdad",
+  "review_status": "complete",
+  "intent_coverage": "covered",
+  "raw_findings": [
+    {
+      "id": "f-001",
+      "severity": "low",
+      "summary": "`removedHelloagents || true` is a tautology — it always evaluates to `true`, making the return value independent of whether helloagents was actually present in the marketplace plugins array.",
+      "detail": "`removedHelloagents` is `nextPlugins.length !== plugins.length` (line 286). When we reach the `if (!nextPlugins.length && isManagedMarketplace)` branch (line 288), the file is deleted. If helloagents was the only plugin, `removedHelloagents` is `true` and `true || true` = `true`. If the marketplace was already empty (no plugins at all), `removedHelloagents` is `false` and `false || true` = `true`. In both cases the function returns `true`, but the semantic distinction — \"I removed a helloagents entry\" vs \"I deleted an empty managed file\" — is lost. Callers that check the return value to determine whether helloagents cleanup actually occurred get a false positive when the marketplace was already empty.",
+      "category": "logic_error",
+      "locatability": "exact",
+      "confidence": "speculative",
+      "evidence_related_file": false,
+      "actionable": false,
+      "file": "scripts/cli-codex.mjs",
+      "line": 290,
+      "diff_hunk": null,
+      "requirement_ref": null
+    },
+    {
+      "id": "f-002",
+      "severity": "low",
+      "summary": "When `marketplace.name` is falsy (undefined, null, or empty string), the `||` fallback makes `isManagedMarketplace` always `true`, treating any unnamed marketplace file as helloagents-managed.",
+      "detail": "If a marketplace file exists with no `name` field (or `name: \"\"`), the expression evaluates as `(undefined || CODEX_MARKETPLACE_NAME) === CODEX_MARKETPLACE_NAME` → `true`. Combined with the `!nextPlugins.length` check, an unnamed but user-created empty marketplace file would be silently deleted during cleanup. This is the same class of false-positive risk as the `isManagedCodexModelInstruction` pattern in a prior change.",
+      "category": "logic_error",
+      "locatability": "exact",
+      "confidence": "speculative",
+      "evidence_related_file": false,
+      "actionable": false,
+      "file": "scripts/cli-codex.mjs",
+      "line": 287,
+      "diff_hunk": null,
+      "requirement_ref": null
+    }
+  ],
+  "findings": [
+    {
+      "id": "f-001",
+      "severity": "low",
+      "summary": "`removedHelloagents || true` is a tautology — it always evaluates to `true`, making the return value independent of whether helloagents was actually present in the marketplace plugins array.",
+      "detail": "`removedHelloagents` is `nextPlugins.length !== plugins.length` (line 286). When we reach the `if (!nextPlugins.length && isManagedMarketplace)` branch (line 288), the file is deleted. If helloagents was the only plugin, `removedHelloagents` is `true` and `true || true` = `true`. If the marketplace was already empty (no plugins at all), `removedHelloagents` is `false` and `false || true` = `true`. In both cases the function returns `true`, but the semantic distinction — \"I removed a helloagents entry\" vs \"I deleted an empty managed file\" — is lost. Callers that check the return value to determine whether helloagents cleanup actually occurred get a false positive when the marketplace was already empty.",
+      "category": "logic_error",
+      "locatability": "exact",
+      "confidence": "speculative",
+      "evidence_related_file": false,
+      "actionable": false,
+      "file": "scripts/cli-codex.mjs",
+      "line": 290,
+      "diff_hunk": null,
+      "requirement_ref": null
+    },
+    {
+      "id": "f-002",
+      "severity": "low",
+      "summary": "When `marketplace.name` is falsy (undefined, null, or empty string), the `||` fallback makes `isManagedMarketplace` always `true`, treating any unnamed marketplace file as helloagents-managed.",
+      "detail": "If a marketplace file exists with no `name` field (or `name: \"\"`), the expression evaluates as `(undefined || CODEX_MARKETPLACE_NAME) === CODEX_MARKETPLACE_NAME` → `true`. Combined with the `!nextPlugins.length` check, an unnamed but user-created empty marketplace file would be silently deleted during cleanup. This is the same class of false-positive risk as the `isManagedCodexModelInstruction` pattern in a prior change.",
+      "category": "logic_error",
+      "locatability": "exact",
+      "confidence": "speculative",
+      "evidence_related_file": false,
+      "actionable": false,
+      "file": "scripts/cli-codex.mjs",
+      "line": 287,
+      "diff_hunk": null,
+      "requirement_ref": null
+    }
+  ],
+  "evidence": [],
+  "advisory_verdict": {
+    "verdict": "concerns",
+    "rationale": "review output was too speculative to justify pass_candidate"
+  },
+  "quality_metrics": {
+    "pack_completeness": 0.75,
+    "noise_count": 0,
+    "raw_findings_count": 2,
+    "emitted_findings_count": 2,
+    "locatability_distribution": {
+      "exact_pct": 1.0,
+      "file_only_pct": 0.0,
+      "none_pct": 0.0
+    },
+    "speculative_ratio": 1.0
+  },
+  "reviewer": {
+    "type": "fresh_llm",
+    "model": "claude-sonnet-4-20250514",
+    "session_isolated": true,
+    "failure_reason": null,
+    "raw_analysis": "# Reviewer Output — Case 010 (helloagents-codex-sanitize)\n# Round: R3 (v0.3 prompt)\n# Reviewer: claude-opus-4.6 (tool-assisted)\n\n## Section 1: Findings\n\n**f-001**\n- **Where**: `scripts/cli-codex.mjs`, line 290 (`return removedHelloagents || true;`)\n- **What**: `removedHelloagents || true` is a tautology — it always evaluates to `true`, making the return value independent of whether helloagents was actually present in the marketplace plugins array.\n- **Why**: `removedHelloagents` is `nextPlugins.length !== plugins.length` (line 286). When we reach the `if (!nextPlugins.length && isManagedMarketplace)` branch (line 288), the file is deleted. If helloagents was the only plugin, `removedHelloagents` is `true` and `true || true` = `true`. If the marketplace was already empty (no plugins at all), `removedHelloagents` is `false` and `false || true` = `true`. In both cases the function returns `true`, but the semantic distinction — \"I removed a helloagents entry\" vs \"I deleted an empty managed file\" — is lost. Callers that check the return value to determine whether helloagents cleanup actually occurred get a false positive when the marketplace was already empty.\n- **Severity estimate**: LOW\n- **Category**: logic_error\n\n**f-002**\n- **Where**: `scripts/cli-codex.mjs`, line 287 (`const isManagedMarketplace = (marketplace?.name || CODEX_MARKETPLACE_NAME) === CODEX_MARKETPLACE_NAME;`)\n- **What**: When `marketplace.name` is falsy (undefined, null, or empty string), the `||` fallback makes `isManagedMarketplace` always `true`, treating any unnamed marketplace file as helloagents-managed.\n- **Why**: If a marketplace file exists with no `name` field (or `name: \"\"`), the expression evaluates as `(undefined || CODEX_MARKETPLACE_NAME) === CODEX_MARKETPLACE_NAME` → `true`. Combined with the `!nextPlugins.length` check, an unnamed but user-created empty marketplace file would be silently deleted during cleanup. This is the same class of false-positive risk as the `isManagedCodexModelInstruction` pattern in a prior change.\n- **Severity estimate**: LOW\n- **Category**: logic_error\n\n## Section 2: Observations\n\n**o-001**\n- **Where**: `cli.mjs`, lines 228–230 (`cleanupHostStandby` for codex)\n- **What**: `cleanupHostStandby` for the codex path now calls both `uninstallCodexStandby(HOME)` and `uninstallCodexGlobal(HOME)`, but the claude/gemini paths only call their respective standby uninstallers; the cleanup scope is asymmetric across hosts.\n- **Why**: This may be intentional since codex has a separate \"global mode\" installation footprint that claude/gemini lack. Would need to see whether `cleanupHostGlobal('codex')` also calls standby cleanup, or if the asymmetry is by design.\n\n**o-002**\n- **Where**: `scripts/cli-codex.mjs`, `sanitizeCodexDeveloperInstructionsBackup` (lines 266–271)\n- **What**: The function uses `normalized.includes(CODEX_DEVELOPER_INSTRUCTIONS)` to detect contaminated backups; a user-owned developer_instructions block that contains `CODEX_DEVELOPER_INSTRUCTIONS` as a substring would be falsely treated as contaminated and discarded.\n- **Why**: The probability depends on how unique the `CODEX_DEVELOPER_INSTRUCTIONS` constant is — if it's a long, distinctive string, the false-positive risk is negligible. Would need to see the constant's value.\n\n**o-003**\n- **Where**: `tests/npm-lifecycle.test.mjs`, line 41\n- **What**: The tarball path now uses `readJson(join(pkgRoot, 'package.json')).version` instead of hardcoded `'3.0.0'`, making the test version-agnostic — a good improvement that prevents the test from breaking on future version bumps.\n- **Why**: Positive observation; no issue.\n\n## Section 3: Overall Assessment\n\nThis is a well-structured patch release with good test coverage. The `sanitizeCodexDeveloperInstructionsBackup` function addresses a real contamination scenario, and the new lifecycle tests are thorough. The main code issue is the `removedHelloagents || true` tautology in `removeCodexMarketplaceEntry`, which silently conflates two distinct cleanup outcomes. The `isManagedMarketplace` check has a secondary false-positive edge case for unnamed marketplace files, though this is low-probability in practice. The doc updates (README, bootstrap, changelog) are consistent with the code changes.\n",
+    "latency_sec": null,
+    "input_tokens": null,
+    "output_tokens": null,
+    "prompt_source": "product",
+    "prompt_version": "v0.1"
+  },
+  "budget": {
+    "status": "complete",
+    "files_reviewed": 13,
+    "files_total": 13,
+    "chars_consumed": 18212,
+    "chars_limit": null
+  }
+}

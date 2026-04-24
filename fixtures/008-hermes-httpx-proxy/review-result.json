@@ -1,0 +1,77 @@
+{
+  "schema_version": "0.1-alpha",
+  "artifact_fingerprint": "a198a5440e01111418cc9adceef4081226d5db1b43cd1d063c56e9aa5cbad2f4",
+  "pack_fingerprint": "45bbf0b44315c39bebca9e15ddf080f17d53a2b921868260ddcf9ba5dc529b0e",
+  "review_status": "complete",
+  "intent_coverage": "covered",
+  "raw_findings": [
+    {
+      "id": "f-001",
+      "severity": "low",
+      "summary": "`_get_proxy_from_env` returns a single proxy URL from the first matching env var, losing per-scheme proxy routing that httpx's native `trust_env` provides.",
+      "detail": "The function checks `HTTPS_PROXY`, `HTTP_PROXY`, and `ALL_PROXY` in order and returns the first non-empty value. This single URL is passed as `proxy=` to `httpx.Client`. httpx's built-in trust_env mechanism reads `HTTPS_PROXY` for HTTPS requests and `HTTP_PROXY` for HTTP requests separately, using different proxies for different URL schemes. By collapsing all env vars into one URL, users who set different proxies for HTTP vs HTTPS (a legitimate corporate proxy configuration) will have all requests routed through whichever proxy env var is alphabetically first in the check order — currently `HTTPS_PROXY`.",
+      "category": "logic_error",
+      "locatability": "file_only",
+      "confidence": "plausible",
+      "evidence_related_file": false,
+      "actionable": true,
+      "file": "run_agent.py",
+      "line": null,
+      "diff_hunk": null,
+      "requirement_ref": null
+    }
+  ],
+  "findings": [
+    {
+      "id": "f-001",
+      "severity": "low",
+      "summary": "`_get_proxy_from_env` returns a single proxy URL from the first matching env var, losing per-scheme proxy routing that httpx's native `trust_env` provides.",
+      "detail": "The function checks `HTTPS_PROXY`, `HTTP_PROXY`, and `ALL_PROXY` in order and returns the first non-empty value. This single URL is passed as `proxy=` to `httpx.Client`. httpx's built-in trust_env mechanism reads `HTTPS_PROXY` for HTTPS requests and `HTTP_PROXY` for HTTP requests separately, using different proxies for different URL schemes. By collapsing all env vars into one URL, users who set different proxies for HTTP vs HTTPS (a legitimate corporate proxy configuration) will have all requests routed through whichever proxy env var is alphabetically first in the check order — currently `HTTPS_PROXY`.",
+      "category": "logic_error",
+      "locatability": "file_only",
+      "confidence": "plausible",
+      "evidence_related_file": false,
+      "actionable": true,
+      "file": "run_agent.py",
+      "line": null,
+      "diff_hunk": null,
+      "requirement_ref": null
+    }
+  ],
+  "evidence": [],
+  "advisory_verdict": {
+    "verdict": "concerns",
+    "rationale": "review found issues that should be inspected"
+  },
+  "quality_metrics": {
+    "pack_completeness": 0.75,
+    "noise_count": 0,
+    "raw_findings_count": 1,
+    "emitted_findings_count": 1,
+    "locatability_distribution": {
+      "exact_pct": 0.0,
+      "file_only_pct": 1.0,
+      "none_pct": 0.0
+    },
+    "speculative_ratio": 0.0
+  },
+  "reviewer": {
+    "type": "fresh_llm",
+    "model": "claude-sonnet-4-20250514",
+    "session_isolated": true,
+    "failure_reason": null,
+    "raw_analysis": "# Reviewer Output — Case 008 (hermes-httpx-proxy)\n# Round: R3 (v0.3 prompt)\n# Reviewer: claude-opus-4.6 (tool-assisted)\n\n## Section 1: Findings\n\n**f-001**\n- **Where**: `run_agent.py`, `_get_proxy_from_env()` (lines 23–34 in diff)\n- **What**: `_get_proxy_from_env` returns a single proxy URL from the first matching env var, losing per-scheme proxy routing that httpx's native `trust_env` provides.\n- **Why**: The function checks `HTTPS_PROXY`, `HTTP_PROXY`, and `ALL_PROXY` in order and returns the first non-empty value. This single URL is passed as `proxy=` to `httpx.Client`. httpx's built-in trust_env mechanism reads `HTTPS_PROXY` for HTTPS requests and `HTTP_PROXY` for HTTP requests separately, using different proxies for different URL schemes. By collapsing all env vars into one URL, users who set different proxies for HTTP vs HTTPS (a legitimate corporate proxy configuration) will have all requests routed through whichever proxy env var is alphabetically first in the check order — currently `HTTPS_PROXY`.\n- **Severity estimate**: LOW\n- **Category**: logic_error\n\n## Section 2: Observations\n\n**o-001**\n- **Where**: `run_agent.py`, inline comment at line 44–46\n- **What**: The comment claims \"httpx won't auto-read proxy from env vars (allow_env_proxies = trust_env and transport is None)\" — if this claim is incorrect for the httpx version in use, the entire fix introduces double-proxy behavior rather than restoring missing proxy support.\n- **Why**: Verifying this claim requires seeing the httpx source code or version pinning for this project. If httpx reads proxy env vars even with a custom transport, requests would be proxied twice.\n\n**o-002**\n- **Where**: `run_agent.py`, `_get_proxy_from_env()` return value passed to `proxy=`\n- **What**: `ALL_PROXY` may contain a SOCKS5 URL (e.g., `socks5://...`); httpx's `proxy=` parameter only supports HTTP/HTTPS proxies unless `httpx[socks]` extra is installed.\n- **Why**: Would need to see the project's dependency list to confirm whether SOCKS proxy support is available.\n\n## Section 3: Overall Assessment\n\nThe fix is well-intentioned — restoring proxy support when a custom transport overrides httpx's default env-proxy detection is a real problem. The implementation is clean and the function correctly handles case-insensitive env var names (both `HTTPS_PROXY` and `https_proxy`). However, collapsing multiple scheme-specific proxy env vars into a single `proxy=` parameter is a semantic regression from httpx's native `trust_env` behavior, which distinguishes between HTTP and HTTPS proxies. The simplest fix would be to pass separate `proxy` mappings per scheme, but the current httpx API surface for `proxy=` may not support that when `transport=` is also set — this would need verification.\n",
+    "latency_sec": null,
+    "input_tokens": null,
+    "output_tokens": null,
+    "prompt_source": "product",
+    "prompt_version": "v0.1"
+  },
+  "budget": {
+    "status": "complete",
+    "files_reviewed": 1,
+    "files_total": 1,
+    "chars_consumed": 1742,
+    "chars_limit": null
+  }
+}

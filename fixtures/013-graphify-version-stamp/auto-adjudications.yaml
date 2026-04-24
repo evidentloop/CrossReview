@@ -1,0 +1,8 @@
+fixture_id: 013-graphify-version-stamp
+run_id: prompt-lab-r3-013-graphify-version-stamp
+adjudicated_at: '2026-04-24'
+findings:
+- auto_finding_id: f-001
+  judgment: valid
+  matched_manual_id: mf-001
+  actionability_judgment: actionable

@@ -1,0 +1,15 @@
+fixture_id: 003-crossreview-review-fixes
+source: manual_fresh_session
+reviewer_model: claude-sonnet-4-20250514
+reviewed_at: '2026-04-21T10:11:22+08:00'
+context_items:
+- type: diff
+  path_or_desc: prompt-lab/cases/003-crossreview-review-fixes/diff.patch
+  required: true
+  covered_by_pack: true
+findings:
+- id: mf-001
+  summary: run.py normalizes dict items with str(item), degrading changed_files/focus
+    prompt context into Python repr strings
+  file: prompt-lab/run.py
+  severity_estimate: low

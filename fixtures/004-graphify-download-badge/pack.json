@@ -1,0 +1,25 @@
+{
+  "schema_version": "0.1-alpha",
+  "artifact_type": "code_diff",
+  "diff": "diff --git a/README.md b/README.md\nindex 55514a5..d159c49 100644\n--- a/README.md\n+++ b/README.md\n@@ -4,7 +4,7 @@\n \n [![CI](https://github.com/safishamsi/graphify/actions/workflows/ci.yml/badge.svg?branch=v4)](https://github.com/safishamsi/graphify/actions/workflows/ci.yml)\n [![PyPI](https://img.shields.io/pypi/v/graphifyy)](https://pypi.org/project/graphifyy/)\n-[![Downloads](https://img.shields.io/badge/downloads-200k%2B-brightgreen)](https://pypi.org/project/graphifyy/)\n+[![Downloads](https://static.pepy.tech/badge/graphifyy)](https://pepy.tech/project/graphifyy)\n [![Sponsor](https://img.shields.io/badge/sponsor-safishamsi-ea4aaa?logo=github-sponsors)](https://github.com/sponsors/safishamsi)\n [![LinkedIn](https://img.shields.io/badge/LinkedIn-Safi%20Shamsi-0077B5?logo=linkedin)](https://www.linkedin.com/in/safi-shamsi)\n \n",
+  "changed_files": [
+    {
+      "path": "README.md",
+      "language": "markdown"
+    }
+  ],
+  "artifact_fingerprint": "cb3b46c36e38cc9a46efceae29a0253170624b81770332ede5de68ead8ab59b2",
+  "pack_fingerprint": "9faa8aa333e1883801fb2d6ee50cef59f1f445d474d58d05184959f1c301ea61",
+  "intent": "Revert the README downloads badge to use pepy.tech.",
+  "task_file": null,
+  "focus": [
+    "documentation"
+  ],
+  "context_files": null,
+  "evidence": null,
+  "budget": {
+    "max_files": null,
+    "max_chars_total": null,
+    "timeout_sec": null
+  }
+}

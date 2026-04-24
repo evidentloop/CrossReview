@@ -1,0 +1,22 @@
+fixture_id: 008-hermes-httpx-proxy
+source: assistant_local_review
+reviewer_model: claude-opus-4.6
+reviewed_at: '2026-04-21T14:55:00+08:00'
+commit: 023208b1
+repo: hermes-agent
+context_items:
+- type: diff
+  path_or_desc: prompt-lab/cases/008-hermes-httpx-proxy/diff.patch
+  required: true
+  covered_by_pack: true
+findings:
+- id: mf-001
+  summary: _get_proxy_from_env returns a single proxy URL (first match among HTTPS_PROXY,
+    HTTP_PROXY, ALL_PROXY), but httpx's native trust_env handling routes HTTPS requests
+    through HTTPS_PROXY and HTTP requests through HTTP_PROXY separately. Passing one
+    URL as proxy= makes all requests use the same proxy regardless of scheme, losing
+    per-scheme proxy distinction when the user has configured different proxies for
+    HTTP vs HTTPS.
+  file: run_agent.py
+  severity_estimate: low
+  evidence_line_approx: for key in ("HTTPS_PROXY", "HTTP_PROXY", "ALL_PROXY",

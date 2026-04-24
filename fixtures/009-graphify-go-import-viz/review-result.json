@@ -1,0 +1,77 @@
+{
+  "schema_version": "0.1-alpha",
+  "artifact_fingerprint": "7be28abcfa6e70857e4a92396c144fe8982288117e5e3b8510a06fe7cd2aa773",
+  "pack_fingerprint": "4e99879f6e76c24755c9f7be805ca72a24aadb75c605fb5065985f1b36543569",
+  "review_status": "complete",
+  "intent_coverage": "covered",
+  "raw_findings": [
+    {
+      "id": "f-001",
+      "severity": "low",
+      "summary": "The new `except ValueError` fallback path in `_rebuild_code` has no targeted regression test despite introducing observable side effects (stale `graph.html` deletion, conditional log message).",
+      "detail": "The diff introduces a new error-handling branch that catches `ValueError` from `to_html`, prints a warning, removes a stale `graph.html` if it exists, and changes the summary log to omit `graph.html` from the products list. This path has three distinct behaviors that could regress silently: (1) the stale file is actually deleted, (2) `graph.json` and `GRAPH_REPORT.md` still land despite the error, (3) the log message correctly reflects which outputs were written. No test file changes appear in this diff for the `_rebuild_code` function.",
+      "category": "missing_test",
+      "locatability": "file_only",
+      "confidence": "speculative",
+      "evidence_related_file": false,
+      "actionable": false,
+      "file": "graphify/watch.py",
+      "line": null,
+      "diff_hunk": null,
+      "requirement_ref": null
+    }
+  ],
+  "findings": [
+    {
+      "id": "f-001",
+      "severity": "low",
+      "summary": "The new `except ValueError` fallback path in `_rebuild_code` has no targeted regression test despite introducing observable side effects (stale `graph.html` deletion, conditional log message).",
+      "detail": "The diff introduces a new error-handling branch that catches `ValueError` from `to_html`, prints a warning, removes a stale `graph.html` if it exists, and changes the summary log to omit `graph.html` from the products list. This path has three distinct behaviors that could regress silently: (1) the stale file is actually deleted, (2) `graph.json` and `GRAPH_REPORT.md` still land despite the error, (3) the log message correctly reflects which outputs were written. No test file changes appear in this diff for the `_rebuild_code` function.",
+      "category": "missing_test",
+      "locatability": "file_only",
+      "confidence": "speculative",
+      "evidence_related_file": false,
+      "actionable": false,
+      "file": "graphify/watch.py",
+      "line": null,
+      "diff_hunk": null,
+      "requirement_ref": null
+    }
+  ],
+  "evidence": [],
+  "advisory_verdict": {
+    "verdict": "concerns",
+    "rationale": "review output was too speculative to justify pass_candidate"
+  },
+  "quality_metrics": {
+    "pack_completeness": 0.75,
+    "noise_count": 0,
+    "raw_findings_count": 1,
+    "emitted_findings_count": 1,
+    "locatability_distribution": {
+      "exact_pct": 0.0,
+      "file_only_pct": 1.0,
+      "none_pct": 0.0
+    },
+    "speculative_ratio": 1.0
+  },
+  "reviewer": {
+    "type": "fresh_llm",
+    "model": "claude-sonnet-4-20250514",
+    "session_isolated": true,
+    "failure_reason": null,
+    "raw_analysis": "# Reviewer Output — Case 009 (graphify-go-import-viz)\n# Round: R3 (v0.3 prompt)\n# Reviewer: claude-opus-4.6 (tool-assisted)\n\n## Section 1: Findings\n\n**f-001**\n- **Where**: `graphify/watch.py`, new try/except block (diff lines 62–72)\n- **What**: The new `except ValueError` fallback path in `_rebuild_code` has no targeted regression test despite introducing observable side effects (stale `graph.html` deletion, conditional log message).\n- **Why**: The diff introduces a new error-handling branch that catches `ValueError` from `to_html`, prints a warning, removes a stale `graph.html` if it exists, and changes the summary log to omit `graph.html` from the products list. This path has three distinct behaviors that could regress silently: (1) the stale file is actually deleted, (2) `graph.json` and `GRAPH_REPORT.md` still land despite the error, (3) the log message correctly reflects which outputs were written. No test file changes appear in this diff for the `_rebuild_code` function.\n- **Severity estimate**: LOW\n- **Category**: missing_test\n\n## Section 2: Observations\n\n**o-001**\n- **Where**: `graphify/extract.py`, `_make_id(\"go\", \"pkg\", raw)` (diff lines 40, 48)\n- **What**: The new Go import node ID format uses the full raw import path (e.g., `\"net/http\"`, `\"github.com/pkg/errors\"`) as input to `_make_id`; if `_make_id` does not sanitize path separators, the resulting ID may contain `/` characters which could cause issues in serialization formats that treat `/` as special.\n- **Why**: `_make_id` is not defined in this diff; its handling of multi-component paths would need to be checked.\n\n**o-002**\n- **Where**: `graphify/watch.py`, `except ValueError` (diff line 68)\n- **What**: The catch is scoped to `ValueError` only, matching the documented `to_html` behavior for >5000 nodes; if `to_html` has other failure modes (e.g., `TypeError` from malformed community data), they would propagate to the outer `except Exception` handler which aborts the entire rebuild.\n- **Why**: Would need to see `to_html`'s implementation to know if non-ValueError exceptions are possible in practice.\n\n## Section 3: Overall Assessment\n\nBoth bugfixes are clean and well-scoped. The Go import ID change is consistently applied across both the `import_declaration` and `import_spec` branches, and the `to_html` fallback correctly preserves core outputs while cleaning up stale artifacts. The CHANGELOG entries accurately describe the changes. The only actionable gap is the absence of a targeted test for the new `except ValueError` path — the fallback behavior has enough moving parts (file deletion, conditional logging, continued execution) that a regression test would be warranted.\n",
+    "latency_sec": null,
+    "input_tokens": null,
+    "output_tokens": null,
+    "prompt_source": "product",
+    "prompt_version": "v0.1"
+  },
+  "budget": {
+    "status": "complete",
+    "files_reviewed": 3,
+    "files_total": 3,
+    "chars_consumed": 4312,
+    "chars_limit": null
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "schema_version": "0.1-alpha",
+  "artifact_fingerprint": "4c12cdebd857e9e8b0415a5ec2ebc9c8c4e0b99cd4d954e7ee47e2a2e69ea566",
+  "pack_fingerprint": "7b03b4d76b328c625ea06e3c3d2b1076c393c7bb217427c6a2f57b0641426546",
+  "review_status": "complete",
+  "intent_coverage": "covered",
+  "raw_findings": [],
+  "findings": [],
+  "evidence": [],
+  "advisory_verdict": {
+    "verdict": "pass_candidate",
+    "rationale": "no findings and pack completeness is sufficient for advisory pass"
+  },
+  "quality_metrics": {
+    "pack_completeness": 0.75,
+    "noise_count": 0,
+    "raw_findings_count": 0,
+    "emitted_findings_count": 0,
+    "locatability_distribution": {
+      "exact_pct": 0.0,
+      "file_only_pct": 0.0,
+      "none_pct": 0.0
+    },
+    "speculative_ratio": 0.0
+  },
+  "reviewer": {
+    "type": "fresh_llm",
+    "model": "claude-sonnet-4-20250514",
+    "session_isolated": true,
+    "failure_reason": null,
+    "raw_analysis": "# Reviewer Output — Case 011 (hermes-cloudflare-headers)\n# Round: R3 (v0.3 prompt)\n# Reviewer: claude-opus-4.6 (tool-assisted)\n\n## Section 1: Findings\n\nNo findings identified.\n\nThe diff centralizes Cloudflare header construction into `_codex_cloudflare_headers()`, replacing two inline copies in `run_agent.py` and adding two new call sites in `auxiliary_client.py`. The implementation is defensive: JWT payload is decoded with `urlsafe_b64decode` (correct for JWTs), padding is computed correctly via `\"=\" * (-len(parts[1]) % 4)`, input validation handles non-string and empty tokens, and the broad `except Exception: pass` ensures malformed tokens degrade gracefully (no account-ID header, but originator and UA still set). The regression test suite (253 lines) covers all four call sites, malformed inputs, canonical header casing, and the header-clearing path for non-Codex base URLs.\n\n## Section 2: Observations\n\n**o-001**\n- **Where**: `agent/auxiliary_client.py`, `_codex_cloudflare_headers`, line: `\"User-Agent\": \"codex_cli_rs/0.0.0 (Hermes Agent)\"`\n- **What**: The User-Agent advertises version `0.0.0`, which some CDN layers or bot-detection systems flag as a synthetic/automated client.\n- **Why**: Whether Cloudflare's specific fingerprinting rules penalize a `0.0.0` version string requires knowledge of Cloudflare's current bot scoring heuristics, which is outside the diff.\n\n**o-002**\n- **Where**: `agent/auxiliary_client.py`, `_codex_cloudflare_headers`, line: `headers[\"ChatGPT-Account-ID\"] = acct_id`\n- **What**: The header casing changed from `ChatGPT-Account-Id` (old code) to `ChatGPT-Account-ID` (new code, matching codex-rs `auth.rs`); HTTP headers are case-insensitive per RFC 7230, but some API endpoints enforce case sensitivity in practice.\n- **Why**: Whether the chatgpt.com backend treats header names case-sensitively requires testing against the live endpoint.\n\n## Section 3: Overall Assessment\n\nThis is a well-executed fix with a clear upgrade path: inline, duplicated header construction is centralized into a shared helper with improved JWT decoding (urlsafe base64 + correct padding), stronger input validation, and correct originator/UA values that match the Cloudflare whitelist. The test coverage is comprehensive, pinning header values, casing, malformed-token handling, and wiring at all four call sites across both the primary and auxiliary client paths. No diff-visible logic defects found.\n",
+    "latency_sec": null,
+    "input_tokens": null,
+    "output_tokens": null,
+    "prompt_source": "product",
+    "prompt_version": "v0.1"
+  },
+  "budget": {
+    "status": "complete",
+    "files_reviewed": 3,
+    "files_total": 3,
+    "chars_consumed": 18521,
+    "chars_limit": null
+  }
+}

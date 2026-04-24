@@ -1,0 +1,20 @@
+fixture_id: 002-helloagents-codex-config
+source: assistant_local_review
+reviewer_model: codex
+reviewed_at: '2026-04-21T11:32:00+08:00'
+baseline_updated_at: '2026-04-22T17:30:00+08:00'
+context_items:
+- type: diff
+  path_or_desc: prompt-lab/cases/002-helloagents-codex-config/diff.patch
+  required: true
+  covered_by_pack: true
+findings:
+- id: mf-001
+  summary: 'removeTopLevelLinesBeingReplaced: indexOf(''='') returns -1 when line
+    has no ''='' → slice(0,-1) produces bogus key that passes the empty check and
+    feeds removeTopLevelTomlBlock with an unintended key'
+  file: scripts/cli-codex-config.mjs
+  severity_estimate: low
+  notes: Latent bug in new code. Current callers always supply 'key = value' lines
+    or empty strings, so not currently triggerable. Added to baseline after Round
+    1 reviewer independently identified this.

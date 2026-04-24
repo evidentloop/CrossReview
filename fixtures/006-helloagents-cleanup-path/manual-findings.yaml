@@ -1,0 +1,21 @@
+fixture_id: 006-helloagents-cleanup-path
+source: assistant_local_review
+reviewer_model: claude-sonnet-4.6
+reviewed_at: '2026-05-16T10:00:00+08:00'
+commit: 76df4e5
+repo: helloagents
+context_items:
+- type: diff
+  path_or_desc: prompt-lab/cases/006-helloagents-cleanup-path/diff.patch
+  required: true
+  covered_by_pack: true
+findings:
+- id: mf-001
+  summary: isManagedCodexModelInstruction detects managed status by substring match
+    on 'helloagents', which would falsely classify a user-owned model_instructions_file
+    whose path happens to contain 'helloagents' (e.g. /home/user/.helloagents/custom.md)
+    as helloagents-managed, silently clearing it on uninstall instead of restoring
+    the user's original value
+  file: scripts/cli-codex.mjs
+  severity_estimate: low
+  evidence_line_approx: return line.includes('helloagents') && line.includes('model_instructions_file')

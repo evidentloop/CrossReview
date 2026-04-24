@@ -1,0 +1,58 @@
+{
+  "schema_version": "0.1-alpha",
+  "artifact_type": "code_diff",
+  "diff": "diff --git a/.gitignore b/.gitignore\nindex 8b65d1a..ce8d9d4 100644\n--- a/.gitignore\n+++ b/.gitignore\n@@ -35,4 +35,5 @@ Thumbs.db\n .sopify-skills/plan/_registry.yaml\n \n # Prompt lab raw outputs (large, gitignore by default; commit selectively)\n-prompt-lab/cases/*/raw-output-*.md\n+prompt-lab/cases/*/raw-output.md\n+prompt-lab/cases/*/rendered-prompt.md\ndiff --git a/.sopify-skills/plan/20260420_crossreview_v0_prompt_lab/background.md b/.sopify-skills/plan/20260420_crossreview_v0_prompt_lab/background.md\nindex bd6b1ba..0a2cd65 100644\n--- a/.sopify-skills/plan/20260420_crossreview_v0_prompt_lab/background.md\n+++ b/.sopify-skills/plan/20260420_crossreview_v0_prompt_lab/background.md\n@@ -6,7 +6,7 @@\n \n ## 上游 Scope\n \n-产品范围定义来自 [docs/v0-scope.md](../../docs/v0-scope.md)（canonical，Status: Confirmed）。\n+产品范围定义来自 [docs/v0-scope.md](../../../docs/v0-scope.md)（canonical，Status: Confirmed）。\n \n ## 当前阶段\n \ndiff --git a/.sopify-skills/plan/20260420_crossreview_v0_prompt_lab/tasks.md b/.sopify-skills/plan/20260420_crossreview_v0_prompt_lab/tasks.md\nindex b24b5c9..fafb599 100644\n--- a/.sopify-skills/plan/20260420_crossreview_v0_prompt_lab/tasks.md\n+++ b/.sopify-skills/plan/20260420_crossreview_v0_prompt_lab/tasks.md\n@@ -2,7 +2,7 @@\n \n ## Source-of-Truth\n \n-实现只认 [docs/v0-scope.md](../../docs/v0-scope.md)（Status: Confirmed）+ 本文件。\n+实现只认 [docs/v0-scope.md](../../../docs/v0-scope.md)（Status: Confirmed）+ 本文件。\n \n ---\n \ndiff --git a/README.md b/README.md\nindex c2247dc..468b173 100644\n--- a/README.md\n+++ b/README.md\n@@ -50,7 +50,7 @@ crossreview verify  # pack + fresh review → structured findings + advisory ver\n \n ## Release Gate\n \n-v0 发布需通过 [8 项 blocking release gates](docs/v0-scope.md#§12-success-criteria--release-gate)，包括：\n+v0 发布需通过 [8 项 blocking release gates](docs/v0-scope.md)（见 §12），包括：\n \n - manual_recall ≥ 0.80\n - precision ≥ 0.70\ndiff --git a/prompt-lab/README.md b/prompt-lab/README.md\nindex ee0b3ff..733fdcb 100644\n--- a/prompt-lab/README.md\n+++ b/prompt-lab/README.md\n@@ -15,11 +15,16 @@ mkdir cases/001-auth-refresh\n # 2. 准备 diff 和 pack\n #    - diff.patch: 真实 git diff\n #    - pack.json: 手工/半手写 ReviewPack（格式见下方）\n-#    - expected.yaml: 手工 cross-review 发现的问题（gold baseline）\n+#    - manual-findings.yaml: 手工 cross-review 发现的问题（gold baseline）\n \n-# 3. 运行\n+# 3a. 有 LLM client 实现时：直接运行\n python run.py cases/001-auth-refresh\n \n+# 3b. 无 LLM client 时：渲染 prompt → 手动粘贴给模型\n+python run.py --render-only cases/001-auth-refresh\n+# → 生成 cases/001-auth-refresh/rendered-prompt.md\n+# → 粘贴到 Claude/ChatGPT session，保存 output 到 raw-output.md\n+\n # 4. 查看 raw output → cases/001-auth-refresh/raw-output.md\n \n # 5. 人工 adjudication → 编辑 cases/001-auth-refresh/adjudication.yaml\ndiff --git a/prompt-lab/cases/.gitkeep b/prompt-lab/cases/.gitkeep\nnew file mode 100644\nindex 0000000..e69de29\ndiff --git a/prompt-lab/prompt-template.md b/prompt-lab/prompt-template.md\nindex a2ef68d..fe82725 100644\n--- a/prompt-lab/prompt-template.md\n+++ b/prompt-lab/prompt-template.md\n@@ -34,8 +34,9 @@ You are an independent code reviewer. You have NO access to the original develop\n \n ## Your Output\n \n-Analyze the diff thoroughly, then report your findings. For each finding:\n+Analyze the diff thoroughly, then report your findings. Number each finding sequentially as **f-001**, **f-002**, etc. For each finding:\n \n+- **ID**: f-001, f-002, ... (sequential, stable — used in adjudication)\n - **Where**: File path and line number (if identifiable from the diff)\n - **What**: One-sentence summary of the issue\n - **Why**: Brief technical explanation\ndiff --git a/prompt-lab/run.py b/prompt-lab/run.py\nindex b87225d..7e82d49 100644\n--- a/prompt-lab/run.py\n+++ b/prompt-lab/run.py\n@@ -3,9 +3,10 @@\n Prompt Lab runner — minimal script for testing CrossReview reviewer prompt.\n \n Usage:\n-    python run.py cases/001-auth-refresh\n+    python run.py cases/001-auth-refresh              # Call LLM directly\n+    python run.py --render-only cases/001-auth-refresh # Render prompt to file for manual paste\n \n-Reads pack.json + prompt-template.md → calls LLM → saves raw-output.md\n+Reads pack.json + prompt-template.md → calls LLM (or renders prompt) → saves output\n \"\"\"\n \n import json\n@@ -27,13 +28,22 @@ def load_pack(case_dir: Path) -> dict:\n     return json.loads(pack_path.read_text(encoding=\"utf-8\"))\n \n \n+def _normalize_list(val) -> list[str]:\n+    \"\"\"Normalize a list that may contain strings or dicts (e.g. FileMeta).\"\"\"\n+    if not isinstance(val, list):\n+        return []\n+    return [item if isinstance(item, str) else str(item) for item in val]\n+\n+\n def build_prompt(template: str, pack: dict) -> str:\n+    focus = _normalize_list(pack.get(\"focus\", []))\n+    changed_files = _normalize_list(pack.get(\"changed_files\", []))\n     return (\n         template\n         .replace(\"{intent}\", pack.get(\"intent\", \"(no intent provided)\"))\n-        .replace(\"{focus}\", \", \".join(pack.get(\"focus\", [])) or \"(no focus specified)\")\n+        .replace(\"{focus}\", \", \".join(focus) or \"(no focus specified)\")\n         .replace(\"{diff}\", pack.get(\"diff\", \"\"))\n-        .replace(\"{changed_files}\", \", \".join(pack.get(\"changed_files\", [])))\n+        .replace(\"{changed_files}\", \", \".join(changed_files))\n         .replace(\"{evidence}\", json.dumps(pack.get(\"evidence\", []), indent=2))\n     )\n \n@@ -84,12 +94,17 @@ def save_output(case_dir: Path, result: dict):\n \n \n def main():\n-    if len(sys.argv) < 2:\n-        print(\"Usage: python run.py <case_dir>\")\n+    render_only = \"--render-only\" in sys.argv\n+    args = [a for a in sys.argv[1:] if a != \"--render-only\"]\n+\n+    if not args:\n+        print(\"Usage: python run.py [--render-only] <case_dir>\")\n+        print(\"  --render-only  Render prompt to file, skip LLM call\")\n         print(\"Example: python run.py cases/001-auth-refresh\")\n+        print(\"Example: python run.py --render-only cases/001-auth-refresh\")\n         sys.exit(1)\n \n-    case_dir = Path(sys.argv[1])\n+    case_dir = Path(args[0])\n     if not case_dir.is_dir():\n         print(f\"Error: {case_dir} is not a directory\")\n         sys.exit(1)\n@@ -101,7 +116,15 @@ def main():\n     print(f\"Case: {case_dir.name}\")\n     print(f\"Diff size: {len(pack.get('diff', ''))} chars\")\n     print(f\"Intent: {pack.get('intent', '(none)')}\")\n-    print(f\"Calling reviewer...\")\n+\n+    if render_only:\n+        rendered_path = case_dir / \"rendered-prompt.md\"\n+        rendered_path.write_text(prompt, encoding=\"utf-8\")\n+        print(f\"Rendered prompt saved: {rendered_path}\")\n+        print(f\"Paste this into your LLM session, then save output to {case_dir / 'raw-output.md'}\")\n+        return\n+\n+    print(\"Calling reviewer...\")\n \n     result = call_reviewer(prompt)\n     save_output(case_dir, result)\ndiff --git a/pyproject.toml b/pyproject.toml\nindex 698c48e..61e5fed 100644\n--- a/pyproject.toml\n+++ b/pyproject.toml\n@@ -15,4 +15,4 @@ dev = [\n \n [build-system]\n requires = [\"setuptools>=68.0\"]\n-build-backend = \"setuptools.backends._legacy:_Backend\"\n+build-backend = \"setuptools.build_meta\"\n",
+  "changed_files": [
+    {
+      "path": ".gitignore",
+      "language": null
+    },
+    {
+      "path": ".sopify-skills/plan/20260420_crossreview_v0_prompt_lab/background.md",
+      "language": "markdown"
+    },
+    {
+      "path": ".sopify-skills/plan/20260420_crossreview_v0_prompt_lab/tasks.md",
+      "language": "markdown"
+    },
+    {
+      "path": "README.md",
+      "language": "markdown"
+    },
+    {
+      "path": "prompt-lab/README.md",
+      "language": "markdown"
+    },
+    {
+      "path": "prompt-lab/cases/.gitkeep",
+      "language": null
+    },
+    {
+      "path": "prompt-lab/prompt-template.md",
+      "language": "markdown"
+    },
+    {
+      "path": "prompt-lab/run.py",
+      "language": "python"
+    },
+    {
+      "path": "pyproject.toml",
+      "language": "toml"
+    }
+  ],
+  "artifact_fingerprint": "037db7492542cb27421c6ea50e6088bc984323e0e329789c4310295596708cb9",
+  "pack_fingerprint": "a17fb5d6dc79548f9fd21fea5035dc073acf899c6b32f03f70c19ff26e587fb5",
+  "intent": "Address 9 review findings: fix broken relative paths, align gitignore pattern, add finding ID format to prompt template, rename expected.yaml to manual-findings.yaml, add --render-only mode to run.py, fix build backend, add input normalization, fix anchor link, add .gitkeep.",
+  "task_file": null,
+  "focus": [
+    "review fixes",
+    "script robustness"
+  ],
+  "context_files": null,
+  "evidence": null,
+  "budget": {
+    "max_files": null,
+    "max_chars_total": null,
+    "timeout_sec": null
+  }
+}

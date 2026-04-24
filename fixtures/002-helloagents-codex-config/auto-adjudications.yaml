@@ -1,0 +1,12 @@
+fixture_id: 002-helloagents-codex-config
+run_id: prompt-lab-r3-002-helloagents-codex-config
+adjudicated_at: '2026-04-21'
+findings:
+- auto_finding_id: f-001
+  judgment: valid
+  matched_manual_id: mf-001
+  actionability_judgment: actionable
+- auto_finding_id: f-002
+  judgment: valid
+  matched_manual_id: null
+  actionability_judgment: actionable

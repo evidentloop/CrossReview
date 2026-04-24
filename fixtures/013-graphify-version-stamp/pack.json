@@ -1,0 +1,43 @@
+{
+  "schema_version": "0.1-alpha",
+  "artifact_type": "code_diff",
+  "diff": "diff --git a/CHANGELOG.md b/CHANGELOG.md\nindex 6a6a8cd..42ef88c 100644\n--- a/CHANGELOG.md\n+++ b/CHANGELOG.md\n@@ -2,6 +2,11 @@\n \n Full release notes with details on each version: [GitHub Releases](https://github.com/safishamsi/graphify/releases)\n \n+## 0.4.23 (2026-04-18)\n+\n+- Fix: stale skill version warning persists after running `graphify install` when multiple platforms were previously installed — `graphify install` now refreshes `.graphify_version` in all other known skill directories so the warning clears across the board (#178)\n+- Fix: `.html` files silently skipped during detection — added `.html` to `DOC_EXTENSIONS`; HTML pages, docs, and web project content now indexed correctly (#260)\n+\n ## 0.4.22 (2026-04-18)\n \n - Fix: AST cache written to `src/graphify-out/cache/` instead of project root when all code files share a common prefix like `src/` — `extract()` now called with explicit `cache_root=watch_path` in `_rebuild_code` and `cache_root=Path('.')` in the Codex skill AST step (#429)\ndiff --git a/README.md b/README.md\nindex 24e78c6..0b282f6 100644\n--- a/README.md\n+++ b/README.md\n@@ -311,7 +311,7 @@ Works with any mix of file types:\n | Type | Extensions | Extraction |\n |------|-----------|------------|\n | Code | `.py .ts .js .jsx .tsx .mjs .go .rs .java .c .cpp .rb .cs .kt .scala .php .swift .lua .zig .ps1 .ex .exs .m .mm .jl .vue .svelte` | AST via tree-sitter + call-graph (cross-file for all languages) + docstring/comment rationale |\n-| Docs | `.md .mdx .txt .rst` | Concepts + relationships + design rationale via Claude |\n+| Docs | `.md .mdx .html .txt .rst` | Concepts + relationships + design rationale via Claude |\n | Office | `.docx .xlsx` | Converted to markdown then extracted via Claude (requires `pip install graphifyy[office]`) |\n | Papers | `.pdf` | Citation mining + concept extraction |\n | Images | `.png .jpg .webp .gif` | Claude vision - screenshots, diagrams, any language |\ndiff --git a/graphify/__main__.py b/graphify/__main__.py\nindex e9e39a2..da0e15f 100644\n--- a/graphify/__main__.py\n+++ b/graphify/__main__.py\n@@ -23,6 +23,19 @@ def _check_skill_version(skill_dst: Path) -> None:\n     if installed != __version__:\n         print(f\"  warning: skill is from graphify {installed}, package is {__version__}. Run 'graphify install' to update.\")\n \n+\n+def _refresh_all_version_stamps() -> None:\n+    \"\"\"After a successful install, update .graphify_version in all other known skill dirs.\n+\n+    Prevents stale-version warnings from platforms that were installed previously\n+    but not explicitly re-installed during this upgrade.\n+    \"\"\"\n+    for cfg in _PLATFORM_CONFIG.values():\n+        vf = Path.home() / cfg[\"skill_dst\"]\n+        vf = vf.parent / \".graphify_version\"\n+        if vf.exists():\n+            vf.write_text(__version__, encoding=\"utf-8\")\n+\n _SETTINGS_HOOK = {\n     \"matcher\": \"Glob|Grep\",\n     \"hooks\": [\n@@ -159,6 +172,10 @@ def install(platform: str = \"claude\") -> None:\n     if platform == \"opencode\":\n         _install_opencode_plugin(Path(\".\"))\n \n+    # Refresh version stamps in all other previously-installed skill dirs so\n+    # stale-version warnings don't fire for platforms not explicitly re-installed.\n+    _refresh_all_version_stamps()\n+\n     print()\n     print(\"Done. Open your AI coding assistant and type:\")\n     print()\ndiff --git a/graphify/detect.py b/graphify/detect.py\nindex a01f953..98cff16 100644\n--- a/graphify/detect.py\n+++ b/graphify/detect.py\n@@ -19,7 +19,7 @@ class FileType(str, Enum):\n _MANIFEST_PATH = \"graphify-out/manifest.json\"\n \n CODE_EXTENSIONS = {'.py', '.ts', '.js', '.jsx', '.tsx', '.mjs', '.ejs', '.go', '.rs', '.java', '.cpp', '.cc', '.cxx', '.c', '.h', '.hpp', '.rb', '.swift', '.kt', '.kts', '.cs', '.scala', '.php', '.lua', '.toc', '.zig', '.ps1', '.ex', '.exs', '.m', '.mm', '.jl', '.vue', '.svelte', '.dart', '.v', '.sv'}\n-DOC_EXTENSIONS = {'.md', '.mdx', '.txt', '.rst'}\n+DOC_EXTENSIONS = {'.md', '.mdx', '.txt', '.rst', '.html'}\n PAPER_EXTENSIONS = {'.pdf'}\n IMAGE_EXTENSIONS = {'.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg'}\n OFFICE_EXTENSIONS = {'.docx', '.xlsx'}\ndiff --git a/pyproject.toml b/pyproject.toml\nindex e18e885..37c4a80 100644\n--- a/pyproject.toml\n+++ b/pyproject.toml\n@@ -4,7 +4,7 @@ build-backend = \"setuptools.build_meta\"\n \n [project]\n name = \"graphifyy\"\n-version = \"0.4.22\"\n+version = \"0.4.23\"\n description = \"AI coding assistant skill (Claude Code, Codex, OpenCode, Cursor, Gemini CLI, Aider, OpenClaw, Factory Droid, Trae, Hermes, Kiro, Google Antigravity) - turn any folder of code, docs, papers, images, or videos into a queryable knowledge graph\"\n readme = \"README.md\"\n license = { file = \"LICENSE\" }\n",
+  "changed_files": [
+    {
+      "path": "CHANGELOG.md",
+      "language": "markdown"
+    },
+    {
+      "path": "README.md",
+      "language": "markdown"
+    },
+    {
+      "path": "graphify/__main__.py",
+      "language": "python"
+    },
+    {
+      "path": "graphify/detect.py",
+      "language": "python"
+    },
+    {
+      "path": "pyproject.toml",
+      "language": "toml"
+    }
+  ],
+  "artifact_fingerprint": "e2f096ba02767504faec8ded2297c293c17bf078d62d77d015be9ac525efd24c",
+  "pack_fingerprint": "c43a205b130824d1523b3b20c2bfb84b0d3124e1517ee572732bcaba53fc4c5f",
+  "intent": "Fix stale skill version warning that persists after running graphify install when multiple platforms were previously installed. Also add .html to DOC_EXTENSIONS so HTML files are indexed.",
+  "task_file": null,
+  "focus": [
+    "version stamp refresh",
+    "DOC_EXTENSIONS",
+    "install lifecycle"
+  ],
+  "context_files": null,
+  "evidence": null,
+  "budget": {
+    "max_files": null,
+    "max_chars_total": null,
+    "timeout_sec": null
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "schema_version": "0.1-alpha",
+  "artifact_fingerprint": "cb3b46c36e38cc9a46efceae29a0253170624b81770332ede5de68ead8ab59b2",
+  "pack_fingerprint": "9faa8aa333e1883801fb2d6ee50cef59f1f445d474d58d05184959f1c301ea61",
+  "review_status": "complete",
+  "intent_coverage": "covered",
+  "raw_findings": [],
+  "findings": [],
+  "evidence": [],
+  "advisory_verdict": {
+    "verdict": "pass_candidate",
+    "rationale": "no findings and pack completeness is sufficient for advisory pass"
+  },
+  "quality_metrics": {
+    "pack_completeness": 0.75,
+    "noise_count": 0,
+    "raw_findings_count": 0,
+    "emitted_findings_count": 0,
+    "locatability_distribution": {
+      "exact_pct": 0.0,
+      "file_only_pct": 0.0,
+      "none_pct": 0.0
+    },
+    "speculative_ratio": 0.0
+  },
+  "reviewer": {
+    "type": "fresh_llm",
+    "model": "claude-sonnet-4-20250514",
+    "session_isolated": true,
+    "failure_reason": null,
+    "raw_analysis": "<!-- model: claude-sonnet-4.6 (context-isolated independent reviewer) | round: 3 | template: v0.3 -->\n\n## Section 1: Findings\n\nNo findings. The diff changes a single badge URL in README.md from a static hardcoded number badge (`img.shields.io/badge/downloads-200k%2B-brightgreen`) to a live download counter badge (`static.pepy.tech/badge/graphifyy`). Both the image URL and the link URL are updated to point to the correct pepy.tech project page. The change is internally consistent and matches the stated intent.\n\n---\n\n## Section 2: Observations\n\n### o-001\n- **Where**: `README.md`, line 7\n- **What**: The live badge depends on an external service (`static.pepy.tech`); if pepy.tech is unavailable, the badge will fail to render.\n- **Why**: The previous badge was a static image hosted by shields.io. The trade-off (live accuracy vs. external dependency) is a design choice, not a defect, and is standard practice for PyPI packages.\n\n### o-002\n- **Where**: `README.md`, line 7\n- **What**: The badge links to `https://pepy.tech/project/graphifyy` rather than `https://pepy.tech/projects/graphifyy` (note: singular vs. plural `project`).\n- **Why**: pepy.tech supports both URL forms and typically redirects — this is likely not a broken link, but the canonical pepy.tech URL structure uses `/projects/` (plural). Would need to verify the actual redirect/canonical path to confirm.\n\n### o-003\n- **Where**: `README.md`, line 7\n- **What**: The badge image URL uses `graphifyy` (double-y) as the package name, which matches the PyPI badge line above — confirming the package name is intentionally `graphifyy`.\n- **Why**: Noting for completeness: the double-y is consistent across all badge URLs in the diff and appears to be the correct package name.\n\n---\n\n## Section 3: Overall Assessment\n\nThis is a clean, minimal, and correct documentation-only change. The static badge is replaced with a live download counter from pepy.tech, which is the standard approach for Python packages. No code logic is modified, no imports change, and the diff is one line. The only noteworthy observation is the minor question about singular vs. plural in the link URL (`/project/` vs. `/projects/`), which is unlikely to be a real breakage given pepy.tech's redirect behaviour.\n",
+    "latency_sec": null,
+    "input_tokens": null,
+    "output_tokens": null,
+    "prompt_source": "product",
+    "prompt_version": "v0.1"
+  },
+  "budget": {
+    "status": "complete",
+    "files_reviewed": 1,
+    "files_total": 1,
+    "chars_consumed": 834,
+    "chars_limit": null
+  }
+}

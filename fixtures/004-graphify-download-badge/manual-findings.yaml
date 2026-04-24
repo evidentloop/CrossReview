@@ -1,0 +1,10 @@
+fixture_id: 004-graphify-download-badge
+source: assistant_local_review
+reviewer_model: codex
+reviewed_at: '2026-04-21T11:32:00+08:00'
+context_items:
+- type: diff
+  path_or_desc: prompt-lab/cases/004-graphify-download-badge/diff.patch
+  required: true
+  covered_by_pack: true
+findings: []

@@ -1,0 +1,12 @@
+fixture_id: 011-hermes-cloudflare-headers
+source: assistant_local_review
+reviewer_model: claude-opus-4.6
+reviewed_at: '2026-05-16T18:00:00+08:00'
+commit: cca32780
+repo: hermes-agent
+context_items:
+- type: diff
+  path_or_desc: prompt-lab/cases/011-hermes-cloudflare-headers/diff.patch
+  required: true
+  covered_by_pack: true
+findings: []

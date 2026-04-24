@@ -1,0 +1,16 @@
+fixture_id: 003-crossreview-review-fixes
+run_id: prompt-lab-r3-003-crossreview-review-fixes
+adjudicated_at: '2026-04-21'
+findings:
+- auto_finding_id: f-001
+  judgment: valid
+  matched_manual_id: null
+  actionability_judgment: actionable
+- auto_finding_id: f-002
+  judgment: valid
+  matched_manual_id: mf-001
+  actionability_judgment: actionable
+- auto_finding_id: f-003
+  judgment: unclear
+  matched_manual_id: null
+  actionability_judgment: unclear

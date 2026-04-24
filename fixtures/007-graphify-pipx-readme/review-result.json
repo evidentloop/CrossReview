@@ -1,0 +1,45 @@
+{
+  "schema_version": "0.1-alpha",
+  "artifact_fingerprint": "ca61d8877a6d5f4411d0445f05ff2fc79bc53d88581304661bd2aef7af214ddd",
+  "pack_fingerprint": "2d6346b988e91e358d7538bd960eb37d400aa3599ad8f99b09637bbb580212e4",
+  "review_status": "complete",
+  "intent_coverage": "covered",
+  "raw_findings": [],
+  "findings": [],
+  "evidence": [],
+  "advisory_verdict": {
+    "verdict": "pass_candidate",
+    "rationale": "no findings and pack completeness is sufficient for advisory pass"
+  },
+  "quality_metrics": {
+    "pack_completeness": 0.75,
+    "noise_count": 0,
+    "raw_findings_count": 0,
+    "emitted_findings_count": 0,
+    "locatability_distribution": {
+      "exact_pct": 0.0,
+      "file_only_pct": 0.0,
+      "none_pct": 0.0
+    },
+    "speculative_ratio": 0.0
+  },
+  "reviewer": {
+    "type": "fresh_llm",
+    "model": "claude-sonnet-4-20250514",
+    "session_isolated": true,
+    "failure_reason": null,
+    "raw_analysis": "# Reviewer Output — Case 007 (graphify-pipx-readme)\n# Round: R3 (v0.3 prompt)\n# Reviewer: claude-sonnet-4.6 (tool-assisted)\n\n## Section 1: Findings\n\nNo findings.\n\nThe diff adds two lines of documentation only. No logic, no executable code path, no configuration changed. The `pipx install graphifyy && graphify install` command is correct: `pipx` installs the package in an isolated environment and adds its entry points (including `graphify`) to `PATH`, so the chained `graphify install` call would succeed. The package name (`graphifyy`) is consistent with the existing `pip install graphifyy` line immediately above.\n\n## Section 2: Observations\n\n**o-001**\n- **Where**: `README.md`, added line 2 (`pipx install graphifyy && graphify install`)\n- **What**: The added example uses `&&` to chain `graphify install` immediately after `pipx install`, but `graphify` may not be on `PATH` in the same shell invocation if pipx's bin directory (typically `~/.local/bin`) is not yet in `PATH` in that session.\n- **Why**: This is a first-run installation concern; `pipx` documentation recommends running `pipx ensurepath` or restarting the shell after the first install. Whether this affects the user depends on their shell configuration and whether this is a fresh pipx setup — context not visible in the diff.\n\n## Section 3: Overall Assessment\n\nThis is a minimal, clean documentation addition. The change is unambiguously correct for the common case (existing pipx user with `~/.local/bin` already on `PATH`). The `&&` chaining behavior (shell continuation semantics) is appropriate here since `graphify install` should only run if `pipx install` succeeds. No issues found in the diff.\n",
+    "latency_sec": null,
+    "input_tokens": null,
+    "output_tokens": null,
+    "prompt_source": "product",
+    "prompt_version": "v0.1"
+  },
+  "budget": {
+    "status": "complete",
+    "files_reviewed": 1,
+    "files_total": 1,
+    "chars_consumed": 697,
+    "chars_limit": null
+  }
+}

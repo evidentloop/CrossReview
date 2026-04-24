@@ -1,0 +1,77 @@
+{
+  "schema_version": "0.1-alpha",
+  "artifact_fingerprint": "e2f096ba02767504faec8ded2297c293c17bf078d62d77d015be9ac525efd24c",
+  "pack_fingerprint": "c43a205b130824d1523b3b20c2bfb84b0d3124e1517ee572732bcaba53fc4c5f",
+  "review_status": "complete",
+  "intent_coverage": "covered",
+  "raw_findings": [
+    {
+      "id": "f-001",
+      "severity": "low",
+      "summary": "`_refresh_all_version_stamps()` is only called from the generic `install(platform)` function, but the codebase has separate install functions for specific platforms (`gemini_install`, `vscode_install`, `_cursor_install`, `_kiro_install`, `claude_install`, `_antigravity_install`) that do not call `_refresh_all_version_stamps()`.",
+      "detail": "The diff adds `_refresh_all_version_stamps()` at the end of the `install(platform: str = \"claude\")` function. However, examining the full `__main__.py` reveals that the `main()` function dispatches to platform-specific install functions (e.g., `gemini_install()`, `vscode_install()`) for certain CLI subcommands. These functions have their own install logic but do not call `_refresh_all_version_stamps()`. As a result, running `graphify gemini install` or `graphify cursor install` (if those subcommands exist) would install for that platform but NOT refresh version stamps on other previously-installed platforms, leaving the stale-warning bug unfixed for those install paths.",
+      "category": "logic_error",
+      "locatability": "exact",
+      "confidence": "speculative",
+      "evidence_related_file": false,
+      "actionable": false,
+      "file": "graphify/__main__.py",
+      "line": 74,
+      "diff_hunk": null,
+      "requirement_ref": null
+    }
+  ],
+  "findings": [
+    {
+      "id": "f-001",
+      "severity": "low",
+      "summary": "`_refresh_all_version_stamps()` is only called from the generic `install(platform)` function, but the codebase has separate install functions for specific platforms (`gemini_install`, `vscode_install`, `_cursor_install`, `_kiro_install`, `claude_install`, `_antigravity_install`) that do not call `_refresh_all_version_stamps()`.",
+      "detail": "The diff adds `_refresh_all_version_stamps()` at the end of the `install(platform: str = \"claude\")` function. However, examining the full `__main__.py` reveals that the `main()` function dispatches to platform-specific install functions (e.g., `gemini_install()`, `vscode_install()`) for certain CLI subcommands. These functions have their own install logic but do not call `_refresh_all_version_stamps()`. As a result, running `graphify gemini install` or `graphify cursor install` (if those subcommands exist) would install for that platform but NOT refresh version stamps on other previously-installed platforms, leaving the stale-warning bug unfixed for those install paths.",
+      "category": "logic_error",
+      "locatability": "exact",
+      "confidence": "speculative",
+      "evidence_related_file": false,
+      "actionable": false,
+      "file": "graphify/__main__.py",
+      "line": 74,
+      "diff_hunk": null,
+      "requirement_ref": null
+    }
+  ],
+  "evidence": [],
+  "advisory_verdict": {
+    "verdict": "concerns",
+    "rationale": "review output was too speculative to justify pass_candidate"
+  },
+  "quality_metrics": {
+    "pack_completeness": 0.75,
+    "noise_count": 0,
+    "raw_findings_count": 1,
+    "emitted_findings_count": 1,
+    "locatability_distribution": {
+      "exact_pct": 1.0,
+      "file_only_pct": 0.0,
+      "none_pct": 0.0
+    },
+    "speculative_ratio": 1.0
+  },
+  "reviewer": {
+    "type": "fresh_llm",
+    "model": "claude-sonnet-4-20250514",
+    "session_isolated": true,
+    "failure_reason": null,
+    "raw_analysis": "# Reviewer Output — Case 013 (graphify-version-stamp)\n# Round: R3 (v0.3 prompt)\n# Reviewer: claude-opus-4.6 (tool-assisted)\n\n## Section 1: Findings\n\n**f-001**\n- **Where**: `graphify/__main__.py`, `_refresh_all_version_stamps()` call at line 74 (inside `install(platform)`)\n- **What**: `_refresh_all_version_stamps()` is only called from the generic `install(platform)` function, but the codebase has separate install functions for specific platforms (`gemini_install`, `vscode_install`, `_cursor_install`, `_kiro_install`, `claude_install`, `_antigravity_install`) that do not call `_refresh_all_version_stamps()`.\n- **Why**: The diff adds `_refresh_all_version_stamps()` at the end of the `install(platform: str = \"claude\")` function. However, examining the full `__main__.py` reveals that the `main()` function dispatches to platform-specific install functions (e.g., `gemini_install()`, `vscode_install()`) for certain CLI subcommands. These functions have their own install logic but do not call `_refresh_all_version_stamps()`. As a result, running `graphify gemini install` or `graphify cursor install` (if those subcommands exist) would install for that platform but NOT refresh version stamps on other previously-installed platforms, leaving the stale-warning bug unfixed for those install paths.\n- **Severity estimate**: LOW\n- **Category**: logic_error\n\n## Section 2: Observations\n\n**o-001**\n- **Where**: `graphify/__main__.py`, `_refresh_all_version_stamps()`, line: `vf = Path.home() / cfg[\"skill_dst\"]`\n- **What**: The function constructs the version stamp path as `Path.home() / cfg[\"skill_dst\"]` then `.parent / \".graphify_version\"`. Whether this path computation is correct depends on whether `cfg[\"skill_dst\"]` points to a file (making `.parent` the skill directory) or a directory (making `.parent` go one level too high).\n- **Why**: `_PLATFORM_CONFIG` is not visible in the diff; the path semantics depend on its structure.\n\n**o-002**\n- **Where**: `graphify/detect.py`, `DOC_EXTENSIONS` set\n- **What**: Adding `.html` to `DOC_EXTENSIONS` means all `.html` files in a project will be indexed as documentation by the LLM extractor. For web application projects with build artifacts or framework-generated HTML, this could significantly increase extraction cost and noise.\n- **Why**: Whether there's a filter (e.g., `.graphifyignore`) to exclude build directories would need to be checked in the detection pipeline.\n\n## Section 3: Overall Assessment\n\nThe diff addresses two distinct issues cleanly: the `.html` DOC_EXTENSIONS addition is straightforward and correct, and the `_refresh_all_version_stamps` concept is sound. However, the version-stamp fix is only wired into the generic `install(platform)` path, not into the platform-specific install functions that also exist in the codebase. This makes it a partial fix — users who install via platform-specific subcommands will still see stale-version warnings on other platforms. The CHANGELOG correctly describes the fix scope as \"graphify install now refreshes...\" (implying only the `graphify install` command), but the issue title (#178) suggests the intent was to fix the problem across all install paths.\n",
+    "latency_sec": null,
+    "input_tokens": null,
+    "output_tokens": null,
+    "prompt_source": "product",
+    "prompt_version": "v0.1"
+  },
+  "budget": {
+    "status": "complete",
+    "files_reviewed": 5,
+    "files_total": 5,
+    "chars_consumed": 4643,
+    "chars_limit": null
+  }
+}

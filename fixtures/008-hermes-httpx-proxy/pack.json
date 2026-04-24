@@ -1,0 +1,27 @@
+{
+  "schema_version": "0.1-alpha",
+  "artifact_type": "code_diff",
+  "diff": "diff --git a/run_agent.py b/run_agent.py\nindex 44d55d29..b7c2b44a 100644\n--- a/run_agent.py\n+++ b/run_agent.py\n@@ -160,6 +160,20 @@ class _SafeWriter:\n         return getattr(self._inner, name)\n \n \n+def _get_proxy_from_env() -> Optional[str]:\n+    \"\"\"Read proxy URL from environment variables.\n+\n+    Checks HTTPS_PROXY, HTTP_PROXY, ALL_PROXY (and lowercase variants) in order.\n+    Returns the first valid proxy URL found, or None if no proxy is configured.\n+    \"\"\"\n+    for key in (\"HTTPS_PROXY\", \"HTTP_PROXY\", \"ALL_PROXY\",\n+                \"https_proxy\", \"http_proxy\", \"all_proxy\"):\n+        value = os.environ.get(key, \"\").strip()\n+        if value:\n+            return value\n+    return None\n+\n+\n def _install_safe_stdio() -> None:\n     \"\"\"Wrap stdout/stderr so best-effort console output cannot crash the agent.\"\"\"\n     for stream_name in (\"stdout\", \"stderr\"):\n@@ -4758,8 +4772,13 @@ class AIAgent:\n                 elif hasattr(_socket, \"TCP_KEEPALIVE\"):\n                     # macOS (uses TCP_KEEPALIVE instead of TCP_KEEPIDLE)\n                     _sock_opts.append((_socket.IPPROTO_TCP, _socket.TCP_KEEPALIVE, 30))\n+                # When a custom transport is provided, httpx won't auto-read proxy\n+                # from env vars (allow_env_proxies = trust_env and transport is None).\n+                # Explicitly read proxy settings to ensure HTTP_PROXY/HTTPS_PROXY work.\n+                _proxy = _get_proxy_from_env()\n                 client_kwargs[\"http_client\"] = _httpx.Client(\n                     transport=_httpx.HTTPTransport(socket_options=_sock_opts),\n+                    proxy=_proxy,\n                 )\n             except Exception:\n                 pass  # Fall through to default transport if socket opts fail\n",
+  "changed_files": [
+    {
+      "path": "run_agent.py",
+      "language": "python"
+    }
+  ],
+  "artifact_fingerprint": "a198a5440e01111418cc9adceef4081226d5db1b43cd1d063c56e9aa5cbad2f4",
+  "pack_fingerprint": "45bbf0b44315c39bebca9e15ddf080f17d53a2b921868260ddcf9ba5dc529b0e",
+  "intent": "Fix proxy support when using custom httpx transport with socket options. httpx skips env-proxy auto-detection when transport is explicitly provided; manually read HTTP_PROXY/HTTPS_PROXY and pass to Client.",
+  "task_file": null,
+  "focus": [
+    "proxy",
+    "httpx",
+    "networking"
+  ],
+  "context_files": null,
+  "evidence": null,
+  "budget": {
+    "max_files": null,
+    "max_chars_total": null,
+    "timeout_sec": null
+  }
+}

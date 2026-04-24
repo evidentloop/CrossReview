@@ -1,0 +1,35 @@
+{
+  "schema_version": "0.1-alpha",
+  "artifact_type": "code_diff",
+  "diff": "diff --git a/CHANGELOG.md b/CHANGELOG.md\nindex 42ef88c..86dc8f1 100644\n--- a/CHANGELOG.md\n+++ b/CHANGELOG.md\n@@ -6,6 +6,8 @@ Full release notes with details on each version: [GitHub Releases](https://githu\n \n - Fix: stale skill version warning persists after running `graphify install` when multiple platforms were previously installed — `graphify install` now refreshes `.graphify_version` in all other known skill directories so the warning clears across the board (#178)\n - Fix: `.html` files silently skipped during detection — added `.html` to `DOC_EXTENSIONS`; HTML pages, docs, and web project content now indexed correctly (#260)\n+- Fix: `_rebuild_code` (watch/update/hook) fails entirely on graphs > 5000 nodes because `to_html` raises `ValueError` — wrapped in its own try/except so `graph.json` and `GRAPH_REPORT.md` always land; stale `graph.html` from a previous smaller run is removed (#432)\n+- Fix: Go stdlib imports (e.g. `\"context\"`) produced `imports_from` edges pointing at local files of the same basename — Go import node IDs now prefixed `go_pkg_` using the full import path, eliminating false cycle-dependency pairs (#431)\n \n ## 0.4.22 (2026-04-18)\n \ndiff --git a/graphify/extract.py b/graphify/extract.py\nindex cac6bf7..f1c02f3 100644\n--- a/graphify/extract.py\n+++ b/graphify/extract.py\n@@ -1947,15 +1947,15 @@ def extract_go(path: Path) -> dict:\n                             path_node = spec.child_by_field_name(\"path\")\n                             if path_node:\n                                 raw = _read_text(path_node, source).strip('\"')\n-                                module_name = raw.split(\"/\")[-1]\n-                                tgt_nid = _make_id(module_name)\n+                                # Prefix with go_pkg_ so stdlib names (e.g. \"context\")\n+                                # don't collide with local files of the same basename.\n+                                tgt_nid = _make_id(\"go\", \"pkg\", raw)\n                                 add_edge(file_nid, tgt_nid, \"imports_from\", spec.start_point[0] + 1)\n                 elif child.type == \"import_spec\":\n                     path_node = child.child_by_field_name(\"path\")\n                     if path_node:\n                         raw = _read_text(path_node, source).strip('\"')\n-                        module_name = raw.split(\"/\")[-1]\n-                        tgt_nid = _make_id(module_name)\n+                        tgt_nid = _make_id(\"go\", \"pkg\", raw)\n                         add_edge(file_nid, tgt_nid, \"imports_from\", child.start_point[0] + 1)\n             return\n \ndiff --git a/graphify/watch.py b/graphify/watch.py\nindex 3bd08ec..537746c 100644\n--- a/graphify/watch.py\n+++ b/graphify/watch.py\n@@ -78,7 +78,18 @@ def _rebuild_code(watch_path: Path, *, follow_symlinks: bool = False) -> bool:\n                           {\"input\": 0, \"output\": 0}, str(watch_path), suggested_questions=questions)\n         (out / \"GRAPH_REPORT.md\").write_text(report, encoding=\"utf-8\")\n         to_json(G, communities, str(out / \"graph.json\"))\n-        to_html(G, communities, str(out / \"graph.html\"), community_labels=labels or None)\n+\n+        # to_html raises ValueError for graphs > MAX_NODES_FOR_VIZ (5000).\n+        # Wrap so core outputs (graph.json + GRAPH_REPORT.md) always land.\n+        html_written = False\n+        try:\n+            to_html(G, communities, str(out / \"graph.html\"), community_labels=labels or None)\n+            html_written = True\n+        except ValueError as viz_err:\n+            print(f\"[graphify watch] Skipped graph.html: {viz_err}\")\n+            stale = out / \"graph.html\"\n+            if stale.exists():\n+                stale.unlink()\n \n         # clear stale needs_update flag if present\n         flag = out / \"needs_update\"\n@@ -87,7 +98,8 @@ def _rebuild_code(watch_path: Path, *, follow_symlinks: bool = False) -> bool:\n \n         print(f\"[graphify watch] Rebuilt: {G.number_of_nodes()} nodes, \"\n               f\"{G.number_of_edges()} edges, {len(communities)} communities\")\n-        print(f\"[graphify watch] graph.json, graph.html and GRAPH_REPORT.md updated in {out}\")\n+        products = \"graph.json\" + (\", graph.html\" if html_written else \"\") + \" and GRAPH_REPORT.md\"\n+        print(f\"[graphify watch] {products} updated in {out}\")\n         return True\n \n     except Exception as exc:\n",
+  "changed_files": [
+    {
+      "path": "CHANGELOG.md",
+      "language": "markdown"
+    },
+    {
+      "path": "graphify/extract.py",
+      "language": "python"
+    },
+    {
+      "path": "graphify/watch.py",
+      "language": "python"
+    }
+  ],
+  "artifact_fingerprint": "7be28abcfa6e70857e4a92396c144fe8982288117e5e3b8510a06fe7cd2aa773",
+  "pack_fingerprint": "4e99879f6e76c24755c9f7be805ca72a24aadb75c605fb5065985f1b36543569",
+  "intent": "Fix two bugs: (1) Go stdlib imports collide with local filenames because import node IDs used only the basename; prefix with go_pkg_ and full import path. (2) to_html raises ValueError on large graphs (>5000 nodes), crashing _rebuild_code; wrap in try/except so graph.json and GRAPH_REPORT.md always land.",
+  "task_file": null,
+  "focus": [
+    "Go import extraction",
+    "graph visualization",
+    "error handling"
+  ],
+  "context_files": null,
+  "evidence": null,
+  "budget": {
+    "max_files": null,
+    "max_chars_total": null,
+    "timeout_sec": null
+  }
+}

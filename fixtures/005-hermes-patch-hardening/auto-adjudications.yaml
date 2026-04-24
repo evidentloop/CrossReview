@@ -1,0 +1,12 @@
+fixture_id: 005-hermes-patch-hardening
+run_id: prompt-lab-r3-005-hermes-patch-hardening
+adjudicated_at: '2026-05-16'
+findings:
+- auto_finding_id: f-001
+  judgment: valid
+  matched_manual_id: null
+  actionability_judgment: actionable
+- auto_finding_id: f-002
+  judgment: valid
+  matched_manual_id: mf-001
+  actionability_judgment: actionable

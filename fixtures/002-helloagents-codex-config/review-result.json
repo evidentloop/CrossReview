@@ -1,0 +1,107 @@
+{
+  "schema_version": "0.1-alpha",
+  "artifact_fingerprint": "855e6ab1144239a0e2ac0843a9974acf287c2d8a528926b2379d08f6c3d0b421",
+  "pack_fingerprint": "287e7eb671b980836b21f56d2294aee9d63f40694b81c11f4358c2dab028465a",
+  "review_status": "complete",
+  "intent_coverage": "covered",
+  "raw_findings": [
+    {
+      "id": "f-001",
+      "severity": "low",
+      "summary": "`line.indexOf('=')` returns -1 when no `=` is present, so `line.slice(0, -1)` produces a garbage key (the line minus its last character) that is then passed to `removeTopLevelTomlBlock`.",
+      "detail": "The expression is `const key = line.slice(0, line.indexOf('=')).trim()`. When `line` has no `=`, `indexOf` returns -1 and `slice(0, -1)` returns the input minus the last character. The guard `if (!key) continue` only catches the empty-string case (empty input trimmed to empty), not a non-empty input without `=`. If a caller ever passes a line value without `=` — e.g., a bare word or a truncated string — `removeTopLevelTomlBlock(next, \"<line_minus_last_char>\")` will be called with a bogus key. The `restoreCodexTopLevelConfig` function accepts arbitrary `modelInstructionsLine` and `notifyLine` arguments (both default to `''`), so the input is not type-guaranteed.",
+      "category": "missing_validation",
+      "locatability": "file_only",
+      "confidence": "speculative",
+      "evidence_related_file": false,
+      "actionable": false,
+      "file": "scripts/cli-codex-config.mjs",
+      "line": null,
+      "diff_hunk": null,
+      "requirement_ref": null
+    },
+    {
+      "id": "f-002",
+      "severity": "low",
+      "summary": "`installCodexModelInstructions` is still exported but its only caller (`cli-codex.mjs`) was replaced in this diff — the export is now potentially dead.",
+      "detail": "The diff removes `installCodexModelInstructions` from the import list in `cli-codex.mjs` (`-  installCodexModelInstructions,`) and all call sites (`- toml = installCodexModelInstructions(...)`) are replaced with `installCodexManagedTopLevelConfig`. The function remains as `export function installCodexModelInstructions` in `cli-codex-config.mjs`. If `cli-codex.mjs` was the only consumer, the export is dead and the function is unreachable.",
+      "category": "other",
+      "locatability": "file_only",
+      "confidence": "speculative",
+      "evidence_related_file": false,
+      "actionable": false,
+      "file": "scripts/cli-codex-config.mjs",
+      "line": null,
+      "diff_hunk": null,
+      "requirement_ref": null
+    }
+  ],
+  "findings": [
+    {
+      "id": "f-001",
+      "severity": "low",
+      "summary": "`line.indexOf('=')` returns -1 when no `=` is present, so `line.slice(0, -1)` produces a garbage key (the line minus its last character) that is then passed to `removeTopLevelTomlBlock`.",
+      "detail": "The expression is `const key = line.slice(0, line.indexOf('=')).trim()`. When `line` has no `=`, `indexOf` returns -1 and `slice(0, -1)` returns the input minus the last character. The guard `if (!key) continue` only catches the empty-string case (empty input trimmed to empty), not a non-empty input without `=`. If a caller ever passes a line value without `=` — e.g., a bare word or a truncated string — `removeTopLevelTomlBlock(next, \"<line_minus_last_char>\")` will be called with a bogus key. The `restoreCodexTopLevelConfig` function accepts arbitrary `modelInstructionsLine` and `notifyLine` arguments (both default to `''`), so the input is not type-guaranteed.",
+      "category": "missing_validation",
+      "locatability": "file_only",
+      "confidence": "speculative",
+      "evidence_related_file": false,
+      "actionable": false,
+      "file": "scripts/cli-codex-config.mjs",
+      "line": null,
+      "diff_hunk": null,
+      "requirement_ref": null
+    },
+    {
+      "id": "f-002",
+      "severity": "low",
+      "summary": "`installCodexModelInstructions` is still exported but its only caller (`cli-codex.mjs`) was replaced in this diff — the export is now potentially dead.",
+      "detail": "The diff removes `installCodexModelInstructions` from the import list in `cli-codex.mjs` (`-  installCodexModelInstructions,`) and all call sites (`- toml = installCodexModelInstructions(...)`) are replaced with `installCodexManagedTopLevelConfig`. The function remains as `export function installCodexModelInstructions` in `cli-codex-config.mjs`. If `cli-codex.mjs` was the only consumer, the export is dead and the function is unreachable.",
+      "category": "other",
+      "locatability": "file_only",
+      "confidence": "speculative",
+      "evidence_related_file": false,
+      "actionable": false,
+      "file": "scripts/cli-codex-config.mjs",
+      "line": null,
+      "diff_hunk": null,
+      "requirement_ref": null
+    }
+  ],
+  "evidence": [],
+  "advisory_verdict": {
+    "verdict": "concerns",
+    "rationale": "review output was too speculative to justify pass_candidate"
+  },
+  "quality_metrics": {
+    "pack_completeness": 0.75,
+    "noise_count": 0,
+    "raw_findings_count": 2,
+    "emitted_findings_count": 2,
+    "locatability_distribution": {
+      "exact_pct": 0.0,
+      "file_only_pct": 1.0,
+      "none_pct": 0.0
+    },
+    "speculative_ratio": 1.0
+  },
+  "reviewer": {
+    "type": "fresh_llm",
+    "model": "claude-sonnet-4-20250514",
+    "session_isolated": true,
+    "failure_reason": null,
+    "raw_analysis": "<!-- model: claude-sonnet-4.6 (context-isolated independent reviewer) | round: 3 | template: v0.3 -->\n\n## Section 1: Findings\n\n### f-001\n- **Where**: `scripts/cli-codex-config.mjs`, `removeTopLevelLinesBeingReplaced`, key extraction line\n- **What**: `line.indexOf('=')` returns -1 when no `=` is present, so `line.slice(0, -1)` produces a garbage key (the line minus its last character) that is then passed to `removeTopLevelTomlBlock`.\n- **Why**: The expression is `const key = line.slice(0, line.indexOf('=')).trim()`. When `line` has no `=`, `indexOf` returns -1 and `slice(0, -1)` returns the input minus the last character. The guard `if (!key) continue` only catches the empty-string case (empty input trimmed to empty), not a non-empty input without `=`. If a caller ever passes a line value without `=` — e.g., a bare word or a truncated string — `removeTopLevelTomlBlock(next, \"<line_minus_last_char>\")` will be called with a bogus key. The `restoreCodexTopLevelConfig` function accepts arbitrary `modelInstructionsLine` and `notifyLine` arguments (both default to `''`), so the input is not type-guaranteed.\n- **Severity estimate**: LOW\n- **Category**: missing_validation\n\n### f-002\n- **Where**: `scripts/cli-codex-config.mjs`, `installCodexModelInstructions` export\n- **What**: `installCodexModelInstructions` is still exported but its only caller (`cli-codex.mjs`) was replaced in this diff — the export is now potentially dead.\n- **Why**: The diff removes `installCodexModelInstructions` from the import list in `cli-codex.mjs` (`-  installCodexModelInstructions,`) and all call sites (`- toml = installCodexModelInstructions(...)`) are replaced with `installCodexManagedTopLevelConfig`. The function remains as `export function installCodexModelInstructions` in `cli-codex-config.mjs`. If `cli-codex.mjs` was the only consumer, the export is dead and the function is unreachable.\n- **Severity estimate**: LOW\n- **Category**: other\n\n---\n\n## Section 2: Observations\n\n### o-001\n- **Where**: `scripts/cli-codex.mjs`, `uninstallCodexStandby` and `uninstallCodexGlobal`, restore path\n- **What**: The old code used `ensureTopLevelTomlLine(toml, 'notify', '')` when the backup value was managed (pass empty string to clear the key); the new code uses `restoreCodexTopLevelConfig(toml, { notifyLine: '' })`. When both restore values are empty, `upsertOrderedCodexTopLevelLines` receives `['', '']`, which filters to `[]`, so `removeTopLevelLinesBeingReplaced` is a no-op and neither key is removed from the TOML.\n- **Why**: The behaviour of `ensureTopLevelTomlLine` with an empty value is not visible in the diff. If it previously removed the key, the new path may leave managed keys in the TOML after uninstall. Requires seeing `ensureTopLevelTomlLine`'s implementation to confirm.\n\n### o-002\n- **Where**: `scripts/cli-toml.mjs`, `prependTopLevelTomlBlocks`\n- **What**: The function calls `normalizeToml` at the end, but `normalizeToml` is not in the diff; its behaviour (whether it collapses multiple blank lines, adds trailing newlines, etc.) could affect the exact format of the assembled TOML.\n- **Why**: Would need to see `normalizeToml`'s implementation to confirm the output matches what the new test assertions expect.\n\n### o-003\n- **Where**: `scripts/cli-toml.mjs`, `prependTopLevelTomlBlocks`, `managedPrelude = normalizedBlocks.join('\\n')`\n- **What**: Blocks are joined with a single newline; if any block value is itself a multi-line TOML construct (e.g., a literal newline inside an array value), the join may produce malformed TOML.\n- **Why**: In practice the managed blocks are single-line assignments (`model_instructions_file = \"...\"` and `notify = [...]`), but the function accepts arbitrary block arrays and has no guard for multi-line content.\n\n### o-004\n- **Where**: `scripts/cli-toml.mjs`, removed exports\n- **What**: `removeTopLevelTomlLines` and `upsertTopLevelTomlKey` appear in the old import list in `cli-codex.mjs` and were removed; whether other consumers of `cli-toml.mjs` still import them is not visible in the diff.\n- **Why**: If no other callers exist, these functions are also dead exports — but this cannot be determined from the diff alone.\n\n---\n\n## Section 3: Overall Assessment\n\nThe diff is a well-structured refactoring: the two-step (remove-then-prepend) abstraction in `upsertOrderedCodexTopLevelLines` cleanly replaces three separate `ensureTopLevelTomlLine` call sites, and the new test case directly validates the ordering constraint. The primary substantive concern is f-001: the key extraction from a line using `indexOf('=')` does not guard against the -1 case, which could corrupt TOML state if a non-`=` value ever reaches `removeTopLevelLinesBeingReplaced`. f-002 is a minor cleanliness issue (potentially dead export). The restore-path semantic equivalence (o-001) deserves verification against `ensureTopLevelTomlLine`'s empty-value behaviour but cannot be confirmed from the diff alone.\n",
+    "latency_sec": null,
+    "input_tokens": null,
+    "output_tokens": null,
+    "prompt_source": "product",
+    "prompt_version": "v0.1"
+  },
+  "budget": {
+    "status": "complete",
+    "files_reviewed": 5,
+    "files_total": 5,
+    "chars_consumed": 12046,
+    "chars_limit": null
+  }
+}

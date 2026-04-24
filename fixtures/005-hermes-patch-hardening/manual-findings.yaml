@@ -1,0 +1,21 @@
+fixture_id: 005-hermes-patch-hardening
+source: assistant_local_review
+reviewer_model: claude-sonnet-4.6
+reviewed_at: '2026-05-16T10:00:00+08:00'
+commit: d2c2e344
+repo: hermes-agent
+context_items:
+- type: diff
+  path_or_desc: prompt-lab/cases/005-hermes-patch-hardening/diff.patch
+  required: true
+  covered_by_pack: true
+findings:
+- id: mf-001
+  summary: _detect_escape_drift requires the suspect sequence to be in old_string,
+    so the guard silently passes when only new_string carries the spurious backslash
+    escape while old_string correctly matches the file; the drifted new_string is
+    written unchanged, corrupting the file
+  file: tools/fuzzy_match.py
+  severity_estimate: medium
+  evidence_line_approx: if suspect in new_string and suspect in old_string and suspect
+    not in matched_regions
