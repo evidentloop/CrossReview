@@ -1,21 +1,28 @@
-# CrossReview
+# 项目蓝图索引
 
-验证型 incubator — context-isolated verification harness
+状态: L1 blueprint-ready
+维护方式: Sopify 托管自动区块；本页只保留状态、当前目标、当前焦点与阅读入口。
 
-## 当前状态
+## 当前目标
 
-**阶段**: Phase 0.5 Prompt Lab
-**目标**: 验证 fresh-session cross-review 自动化是否可行
-**Scope**: [docs/v0-scope.md](../../docs/v0-scope.md)
+<!-- sopify:auto:goal:start -->
+- 项目：`cross-review`。
+- 长期目标与范围收敛到 `./background.md`；本索引只保留索引必需区块，不展开正文。
+<!-- sopify:auto:goal:end -->
 
 ## 当前焦点
 
-Prompt Lab：用 3-5 个真实 diff 测试 reviewer prompt 质量，确认核心假设成立后再进入 Phase 1 工程实现。
+<!-- sopify:auto:focus:start -->
+- 当前活动 plan：暂无。
+- history 归档：尚未生成。
+<!-- sopify:auto:focus:end -->
 
-## 阅读入口
+## 深入阅读入口
 
-- 产品 scope → `docs/v0-scope.md`
-- 项目背景 → `background.md`（本目录）
-- 技术约束 → `design.md`（本目录）
-- 长期路线 → `tasks.md`（本目录）
-- 当前执行计划 → `.sopify-skills/plan/20260420_crossreview_v0_prompt_lab/`
+<!-- sopify:auto:read-next:start -->
+- [项目技术约定](../project.md)
+- [蓝图背景](./background.md)
+- [蓝图设计](./design.md)
+- [蓝图任务](./tasks.md)
+- 首次显式 `~go finalize` 后才会出现 history。
+<!-- sopify:auto:read-next:end -->
