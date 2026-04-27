@@ -48,8 +48,9 @@ Full evaluation across 33 fixtures (claude-opus-4.6, external_only scope):
 ## Quick Start
 
 ```bash
-pip install -e .                    # full CLI (pack + verify commands)
-pip install -e '.[anthropic]'       # + Anthropic standalone reviewer backend
+pip install crossreview              # from PyPI (v0.1.0a1+)
+pip install -e .                     # local dev (pack + verify commands)
+pip install -e '.[anthropic]'        # + Anthropic standalone reviewer backend
 
 # configure standalone verify via flags, crossreview.yaml, or env vars
 # example:
@@ -171,9 +172,10 @@ Only the Reviewer calls an LLM. Everything else is rule-based — no AI in the l
 ## Installation
 
 ```bash
-pip install -e .                    # full CLI (pack + verify commands)
-pip install -e '.[anthropic]'       # + Anthropic standalone reviewer backend
-pip install -e '.[dev]'             # dev dependencies (pytest + ruff)
+pip install crossreview              # from PyPI (v0.1.0a1+)
+pip install -e .                     # local dev (pack + verify commands)
+pip install -e '.[anthropic]'        # + Anthropic standalone reviewer backend
+pip install -e '.[dev]'              # dev dependencies (pytest + ruff)
 ```
 
 Two reviewer backend modes:
@@ -278,7 +280,7 @@ All commands return **0** when a `ReviewResult` is successfully produced, regard
 For automation, check `review_status` and `advisory_verdict` in the JSON output instead of relying on the exit code:
 
 ```bash
-crossreview verify --diff HEAD~1 --format json | jq -e '.advisory_verdict == "pass_candidate"'
+crossreview verify --diff HEAD~1 --format json | jq -e '.advisory_verdict.verdict == "pass_candidate"'
 ```
 
 ## Status
@@ -303,7 +305,7 @@ crossreview verify --diff HEAD~1 --format json | jq -e '.advisory_verdict == "pa
 
 **Supported**: `code_diff` artifact only · advisory verdict · single `fresh_llm` reviewer · deterministic adjudicator and normalizer (no LLM fallback)
 
-**Out of scope (v0)**: Python SDK · MCP Server · Agent Skill · CI/CD Action · cross-model reviewer · verdict = block
+**Out of scope (v0)**: Python SDK · MCP Server · CI/CD Action · Agent Skill runtime mode (advisory SKILL.md provided; runtime bridge deferred) · cross-model reviewer · verdict = block
 
 **Release gate**: v0 must pass [9 blocking metrics](docs/v0-scope.md) (§12), including manual_recall ≥ 0.80, precision ≥ 0.70, fixture_count ≥ 20, invalid_findings_per_run ≤ 2, and 5 others. All 9 currently pass (`blocking_pass: true`).
 
