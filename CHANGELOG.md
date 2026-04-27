@@ -52,7 +52,8 @@ Evaluated on 33 fixtures (30 external + 3 self-hosting), claude-opus-4.6.
 ### Out of Scope (v0)
 
 - Python SDK (internal APIs not stable)
-- MCP Server / Agent Skill / CI/CD Action
+- MCP Server / CI/CD Action
+- Agent Skill runtime mode (advisory SKILL.md provided; runtime bridge deferred)
 - Cross-model reviewer
 - Verdict = block
 - Evidence Collector (`--evidence-cmd`, planned for v0.5+)
