@@ -46,7 +46,7 @@ CrossReview 目前仍处于 **验证型 incubator** 状态，因此：
 
 ### Standalone-first 口径
 
-即使未来放到 `sopify-ai` 同 org 下，CrossReview 仍应坚持：
+即使未来放到 `evidentloop` 同 org 下，CrossReview 仍应坚持：
 
 - README 首屏先写 standalone quick start
 - ReviewPack / ReviewResult 保持宿主无关 contract

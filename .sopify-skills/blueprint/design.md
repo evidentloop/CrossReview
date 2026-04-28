@@ -60,10 +60,10 @@ CrossReview 的长期推荐形态是：
 
 | 维度 | 口径 |
 |------|------|
-| 仓库归属 | 迁往 `sopify-ai` 同 org 下的独立 repo |
+| 仓库归属 | 迁往 `evidentloop` 同 org 下的独立 repo |
 | 当前阶段 | 在个人仓库继续 incubate，直到 v0 gate 与发布路径稳定 |
 | 产品叙事 | 独立 verifier，不是 Sopify 私有模块 |
 | 宿主关系 | Sopify 是 first deep host，不是 exclusive host |
 | contract 约束 | ReviewPack / ReviewResult 不引入 Sopify 内部状态词 |
 
-当前不建议因此单独优化 org 名。只要 sibling repo 保持 standalone-first，`sopify-ai` 不会自动把 CrossReview 锁定为 Sopify-only 产品；是否需要更中性的 umbrella org，应在出现明确外部 adoption / 品牌信号后再评估。
+当前不建议因此单独优化 org 名。只要 sibling repo 保持 standalone-first，`evidentloop` 不会自动把 CrossReview 锁定为 Sopify-only 产品；是否需要更中性的 umbrella org，应在出现明确外部 adoption / 品牌信号后再评估。
