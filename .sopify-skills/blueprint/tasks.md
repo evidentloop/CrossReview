@@ -12,11 +12,18 @@
 | 优先级 | 任务 | 前置条件 | 阶段 |
 |--------|------|---------|------|
 | P0 | v0 CLI dogfood 2 周+ | v0 release gate ✅ | 当前 |
+| P0 | CI/CD: GitHub Actions (test + lint on PR, PyPI auto-publish on tag) | — | 基建 |
+| P0 | README badges (PyPI version, tests, license, Python version) | CI/CD | 基建 |
 | P0.5 | Evidence collector (`--evidence-cmd`) | v0 dogfood | v0.5 |
+| P1 | CONTRIBUTING.md (三级贡献模型: Fix/Enhancement/Feature) | — | 基建 |
+| P1 | README 语言选择器 (顶部 English \| 中文) | — | 基建 |
 | P1 | Loop mode + stop policy | evidence collector | v0.5 |
 | P1 | Multi-artifact schema 扩展 | v0 dogfood + plan eval baseline | v1 |
+| P2 | Quick Start 补 API key 步骤 + Troubleshooting 段 | — | 文档 |
+| P2 | README collapsible install paths (`<details>`) | — | 文档 |
 | P2 | history_log + circuit_breaker | loop mode | v1 |
 | P2 | Cross-model reviewer | v0 dogfood | v1 |
+| P3 | Founder voice section ("Why I Built This") | v0.5+ | 文档 |
 | P3 | MCP Server / CI Action | stable SDK | v1+ |
 
 ### 关键决策
