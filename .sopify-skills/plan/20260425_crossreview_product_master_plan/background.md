@@ -1,9 +1,10 @@
 # CrossReview 产品总纲
 
-> **Status**: Draft — 待评审确认
+> **Status**: Active — v0.1.0a1 已发布，v0.5 dogfood 准备中
 > **创建日期**: 2026-04-25
 > **定位**: 产品级总纲文档，覆盖 v0→v2 全生命周期规划
 > **前置**: v0-scope.md（v0 精确范围）、20260424_lightweight_pluggable_architecture（Sopify 方案总纲）
+> **最近同步**: 2026-04-28 — 同步 README / CHANGELOG / PyPI 0.1.0a1 发布事实
 
 ---
 
@@ -200,7 +201,7 @@ Clone 仓库到 sandbox
 
 2. **CrossReview 是唯一有确定性判定层的**。其他三个全部依赖 LLM 做最终判断 — LLM 说这个 finding 是 HIGH 就是 HIGH，没有规则校验。
 
-3. **CrossReview 是唯一可量化质量的**。其他三个的 precision/recall 是黑盒。CrossReview 有 20 fixture + 9 指标 release gate，可以公开说"precision ≥ 0.70"。
+3. **CrossReview 是唯一可量化质量的**。其他三个的 precision/recall 是黑盒。CrossReview 有 33 fixture + 9 指标 release gate，可以公开说"precision ≥ 0.70"。
 
 4. **CrossReview 是唯一支持全制品的**。协议层（ReviewPack → ReviewResult）不限于 code_diff，可扩展到 design/plan/analysis。其他三个只看代码。
 
@@ -349,31 +350,29 @@ eval/
 
 **不满足时的退出策略**：退回为 prompt pattern / agent skill，不做独立产品化。
 
-### v0 Release Gate 当前实测结果（20 fixture, eval-data 分支）
+### v0 Release Gate 当前实测结果（33 fixtures, 2026-04-27）
 
-> 以下数据由 `python -m crossreview_eval --fixtures ./fixtures/` 在 eval-data 分支实际运行产出。
+> 以下数据与 `CHANGELOG.md` 0.1.0a1、README 当前 release gate 摘要一致。
 
-| 指标 | 阈值 | external_only (19) | overall (20) | 通过 |
-|------|:---:|:---:|:---:|:---:|
-| `manual_recall` | ≥ 0.80 | **0.929** | 0.933 | ✅ |
-| `precision` | ≥ 0.70 | **0.875** | 0.885 | ✅ |
-| `invalid_findings_per_run` | ≤ 2 | **0.158** | 0.150 | ✅ |
-| `max_invalid_single_run` | ≤ 5 | **—** | — | ⏳ 待重跑后补值 |
-| `unclear_rate` | ≤ 0.15 | **0.200** | 0.212 | ❌ |
-| `context_fidelity` | ≥ 0.80 | **1.000** | 1.000 | ✅ |
-| `actionability` | ≥ 0.90 | **1.000** | 1.000 | ✅ |
-| `failure_rate` | ≤ 0.10 | **0.000** | 0.000 | ✅ |
-| `fixture_count` | ≥ 20 | **19** | 20 | ✅ (注) |
+| 指标 | 阈值 | 实测 | 通过 |
+|------|:---:|:---:|:---:|
+| `manual_recall` | ≥ 0.80 | **0.929** | ✅ |
+| `precision` | ≥ 0.70 | **0.885** | ✅ |
+| `invalid_findings_per_run` | ≤ 2 | **0.158** | ✅ |
+| `max_invalid_single_run` | ≤ 5 | **1** | ✅ |
+| `unclear_rate` | ≤ 0.15 | **0.133** | ✅ |
+| `context_fidelity` | ≥ 0.80 | **1.000** | ✅ |
+| `actionability` | ≥ 0.90 | **1.000** | ✅ |
+| `failure_rate` | ≤ 0.10 | **0.000** | ✅ |
+| `fixture_count` | ≥ 20 | **33** | ✅ |
 
-> **fixture_count 口径**：`fixture_count` gate 按 overall 池计算（代码 `crossreview_eval.py:L557-559`），因此 external_only=19 不阻断；overall=20 ≥ 20 通过。
-
-**Release Gate 结果**：`blocking_pass: false` — 8/9 指标通过 + self_hosting_pool_limit_ok 通过，唯一阻断项 `unclear_rate`。`max_invalid_single_run` 待重跑后补值。
+**Release Gate 结果**：`blocking_pass: true` — 9/9 blocking metrics 通过，self_hosting_pool_limit_ok 通过。评测池为 30 external + 3 self-hosting fixtures。
 
 **关键观察**：
 - recall (0.929) 远超阈值，说明审查覆盖度优秀
-- precision (0.875) 健康，false positive 率低
-- unclear_rate (0.200 > 0.150) 是唯一阻断 — 属于可解决的工程问题（优化 prompt 的 hedging 输出 或 调整 unclear 分类逻辑）
-- 与早期 4 fixture preliminary 结果对比：precision 从 1.00 → 0.875（样本扩大后符合预期下降），recall 从 0.75 → 0.929（prompt 迭代显著提升）
+- precision (0.885) 健康，false positive 率低
+- unclear_rate (0.133 ≤ 0.150) 已解除 v0-04a 阻塞
+- v0-05 human-readable output 与 v0-06 one-stop `verify --diff` 已随 0.1.0a1 发布
 
 ### 全制品 Release Gate 设计思路
 
@@ -394,8 +393,8 @@ eval/
 | 形态 | 目标用户 | 摩擦度 | 价值密度 | 实现复杂度 | 优先级 |
 |------|---------|--------|---------|-----------|--------|
 | **CLI** | 开发者 | 低 | 中 | 低（已完成） | **v0 ✅** |
-| **Sopify 插件** | Sopify 用户 | 低 | 高 | 中 | **v0.5** |
-| **PyPI 发布** | Python 社区 | 极低 | 中 | 低 | **v0.5** |
+| **Sopify 插件** | Sopify 用户 | 低 | 高 | 中 | **v0.5 / advisory 已起草** |
+| **PyPI 发布** | Python 社区 | 极低 | 中 | 低 | **v0.1.0a1 ✅** |
 | **GitHub Action** | GitHub 用户 | 极低 | 高 | 中 | **v1** |
 | **MCP Server** | AI 工具生态 | 中 | 高 | 中 | **v1** |
 | **Stable Python SDK** | 集成开发者 | 中 | 中 | 低 | **v1** |
@@ -404,42 +403,43 @@ eval/
 
 ### 版本路线图
 
-#### v0 — 验证核心假设（当前 → release gate 通过）
+#### v0 — 验证核心假设（已完成 → 0.1.0a1）
 
 ```yaml
 目标: 证明"context isolation + 确定性判定"在 code_diff 上可行
 产品形态: CLI (crossreview pack / verify / render-prompt / ingest)
 许可: MIT
-分发: GitHub + pip install -e .
+分发: GitHub + PyPI 0.1.0a1
 
 里程碑:
-  1. 完成 Evidence Collector 基础能力
-  2. 20 fixture eval 全量通过 9 指标 release gate
-  3. human-readable output (--format human)
-  4. one-stop verify (crossreview verify --diff)
+  1. 33 fixture eval 全量通过 9 指标 release gate
+  2. human-readable output (--format human)
+  3. one-stop verify (crossreview verify --diff)
+  4. render-prompt + ingest host-integrated 模式
 
 v0 的退出条件:
-  通过 release gate → 进入 v0.5
+  已满足，进入 v0.5 dogfood / integration 阶段
   不通过 → 退回 prompt pattern / agent skill，不做独立产品化
 ```
 
-#### v0.5 — 生态集成 + 首次发布
+#### v0.5 — 生态集成 + dogfood
 
 ```yaml
-目标: 建立独立产品身份 + Sopify 生态集成
+目标: 验证独立产品身份 + Sopify 生态集成
 产品形态: CLI + PyPI 包 + Sopify advisory 插件 (对标 Graphify 模式)
 
 里程碑:
-  1. PyPI 首次发布 (crossreview 0.1.0)
+  1. PyPI 0.1.0a1 已发布，后续只做发布 smoke 与必要补丁
   2. Sopify advisory 模式集成（方案总纲 Phase 4a，不依赖 Phase 3）
      - 纯 SKILL.md + skill.yaml，无 bridge.py
      - LLM 读 SKILL.md 后自行调用 crossreview CLI
      - 在 develop 完成后审查 code_diff
-  3. 至少 2 篇技术文章（技术影响力建设）
-  4. 50 fixture 目标（持续扩充 eval 体系）
+  3. 3 项目 dogfood：验证 LLM 是否可靠遵循 advisory SKILL.md
+  4. 至少 2 篇技术文章（技术影响力建设）
+  5. 50 fixture 目标（持续扩充 eval 体系）
 
 关键产出:
-  - crossreview 0.1.0 on PyPI
+  - crossreview 0.1.0a1 on PyPI
   - Sopify .agents/skills/cross-review/ 目录（SKILL.md + skill.yaml，advisory mode）
   - 技术博客："为什么 AI 编程需要独立审查"
 
@@ -586,7 +586,7 @@ crossreview ingest --raw-analysis output.md --pack pack.json
 | **全制品扩展潜力** | 蓝海 — 软件工程领域无专门的 AI 全制品审查工具 |
 | **商业化可行性** | 渐进可行：CLI → Action → API → Enterprise |
 | **最大护城河** | eval 体系（数据壁垒）+ 协议标准（网络效应） |
-| **v0 就绪度** | 20 fixture eval 8/9 通过，差 unclear_rate 一项即可 release |
+| **v0 就绪度** | 33 fixture eval 9/9 通过，0.1.0a1 已发布；下一步是 dogfood 与发布 smoke |
 
 ### 三层价值定位
 
