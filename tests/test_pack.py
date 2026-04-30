@@ -26,7 +26,6 @@ from crossreview.pack import (
 from crossreview.schema import (
     ArtifactType,
     ContextFile,
-    DiffSource,
     GitDiffSource,
     Evidence,
     EvidenceStatus,
