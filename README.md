@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/evidentloop/cross-review/actions/workflows/ci.yml/badge.svg)](https://github.com/evidentloop/cross-review/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/pypi/v/crossreview)](https://pypi.org/project/crossreview/)
-[![Python](https://img.shields.io/pypi/pyversions/crossreview)](https://pypi.org/project/crossreview/)
+[![Python](https://img.shields.io/badge/python-%3E%3D3.10-blue)](https://pypi.org/project/crossreview/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 English | [简体中文](README.zh-CN.md)
