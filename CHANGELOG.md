@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.1.0a3 — 2026-04-30
+
+### Packaging
+
+- Add Python version classifiers so package indexes and badge services can resolve supported Python versions.
+- Keep package metadata aligned with PEP 639 by relying on `license = "MIT"` instead of deprecated license classifiers.
+
+### Skills
+
+- Make the bundled cross-review advisory skill metadata compatible with Sopify's minimal YAML parser.
+
 ## 0.1.0a2 — 2026-04-30
 
 ### CLI

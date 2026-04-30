@@ -53,7 +53,7 @@ Full evaluation across 33 fixtures (claude-opus-4.6, external_only scope):
 ## Quick Start
 
 ```bash
-pip install crossreview              # from PyPI (v0.1.0a2+)
+pip install crossreview              # from PyPI (v0.1.0a3+)
 pip install -e .                     # local dev (pack + verify commands)
 pip install -e '.[anthropic]'        # + Anthropic standalone reviewer backend
 pip install -e '.[dev]'              # dev dependencies (pytest + ruff)
